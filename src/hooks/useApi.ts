@@ -75,4 +75,3 @@ export async function apiCall<T>(endpoint: string, options?: RequestInit): Promi
   
   return response.json();
 }
-</script>

@@ -5,6 +5,27 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Minecraft Server Monitor - Prominence II RPG</title>
+    <script>
+      // Verificar se o sistema foi instalado
+      fetch('http://localhost/minecraft-monitor/php/auth.php', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ action: 'check' })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.error && data.error.includes('não instalado')) {
+          window.location.href = 'http://localhost/minecraft-monitor/php/install.php';
+        }
+      })
+      .catch(error => {
+        // Se houver erro de conexão, pode ser que o sistema não esteja instalado
+        console.log('Verificando instalação...');
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>
