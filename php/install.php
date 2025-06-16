@@ -1,303 +1,3 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Instalação - Minecraft Server Monitor</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        minecraft: {
-                            50: '#f0fdf4',
-                            100: '#dcfce7',
-                            200: '#bbf7d0',
-                            300: '#86efac',
-                            400: '#4ade80',
-                            500: '#22c55e',
-                            600: '#16a34a',
-                            700: '#15803d',
-                            800: '#166534',
-                            900: '#14532d',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-</head>
-<body class="bg-gradient-to-br from-minecraft-50 to-minecraft-100 min-h-screen">
-    <div class="container mx-auto px-4 py-8">
-        <div class="max-w-2xl mx-auto">
-            <!-- Header -->
-            <div class="text-center mb-8">
-                <div class="mx-auto w-16 h-16 bg-minecraft-600 rounded-2xl flex items-center justify-center mb-4">
-                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-                    </svg>
-                </div>
-                <h1 class="text-3xl font-bold text-gray-900 mb-2">Minecraft Server Monitor</h1>
-                <p class="text-gray-600">Instalação e Configuração Inicial</p>
-            </div>
-
-            <!-- Progress Bar -->
-            <div class="mb-8">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="text-sm font-medium text-minecraft-700">Progresso da Instalação</span>
-                    <span class="text-sm font-medium text-minecraft-700"><?php echo $step; ?>/4</span>
-                </div>
-                <div class="w-full bg-gray-200 rounded-full h-2">
-                    <div class="bg-minecraft-600 h-2 rounded-full transition-all duration-300" style="width: <?php echo ($step/4)*100; ?>%"></div>
-                </div>
-            </div>
-
-            <!-- Installation Form -->
-            <div class="bg-white rounded-2xl shadow-xl p-8">
-                <?php if ($error): ?>
-                    <div class="mb-6 p-4 bg-red-100 border border-red-300 rounded-lg">
-                        <div class="flex items-center">
-                            <svg class="w-5 h-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
-                            </svg>
-                            <p class="text-red-700"><?php echo htmlspecialchars($error); ?></p>
-                        </div>
-                    </div>
-                <?php endif; ?>
-
-                <?php if ($success): ?>
-                    <div class="mb-6 p-4 bg-green-100 border border-green-300 rounded-lg">
-                        <div class="flex items-center">
-                            <svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                            </svg>
-                            <p class="text-green-700"><?php echo htmlspecialchars($success); ?></p>
-                        </div>
-                    </div>
-                <?php endif; ?>
-
-                <?php if ($step == 1): ?>
-                    <!-- Step 1: System Check -->
-                    <div class="mb-6">
-                        <h2 class="text-2xl font-bold text-gray-900 mb-4">Verificação do Sistema</h2>
-                        <p class="text-gray-600 mb-6">Verificando se todos os requisitos estão atendidos...</p>
-                    </div>
-
-                    <?php
-                    $checks = [
-                        'PHP Version' => version_compare(PHP_VERSION, '7.4.0', '>='),
-                        'PDO Extension' => extension_loaded('pdo'),
-                        'PDO MySQL' => extension_loaded('pdo_mysql'),
-                        'JSON Extension' => extension_loaded('json'),
-                        'Session Support' => function_exists('session_start'),
-                        'File Write Permission' => is_writable(__DIR__)
-                    ];
-                    
-                    $allPassed = true;
-                    foreach ($checks as $check => $result) {
-                        if (!$result) $allPassed = false;
-                    }
-                    ?>
-
-                    <div class="space-y-3 mb-6">
-                        <?php foreach ($checks as $check => $result): ?>
-                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                <span class="text-gray-700"><?php echo $check; ?></span>
-                                <?php if ($result): ?>
-                                    <span class="flex items-center text-green-600">
-                                        <svg class="w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                                        </svg>
-                                        OK
-                                    </span>
-                                <?php else: ?>
-                                    <span class="flex items-center text-red-600">
-                                        <svg class="w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
-                                        </svg>
-                                        FALHOU
-                                    </span>
-                                <?php endif; ?>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-
-                    <?php if ($allPassed): ?>
-                        <a href="?step=2" class="w-full block text-center bg-minecraft-600 hover:bg-minecraft-700 text-white font-medium py-3 px-4 rounded-lg transition-colors">
-                            Continuar para Configuração do Banco
-                        </a>
-                    <?php else: ?>
-                        <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
-                            <p class="text-red-700 font-medium mb-2">Requisitos não atendidos!</p>
-                            <p class="text-red-600 text-sm">Corrija os problemas acima antes de continuar. Verifique se o XAMPP está configurado corretamente.</p>
-                        </div>
-                    <?php endif; ?>
-
-                <?php elseif ($step == 2): ?>
-                    <!-- Step 2: Database Configuration -->
-                    <div class="mb-6">
-                        <h2 class="text-2xl font-bold text-gray-900 mb-4">Configuração do Banco de Dados</h2>
-                        <p class="text-gray-600 mb-6">Configure a conexão com o MySQL do XAMPP. O banco e todas as tabelas serão criados automaticamente.</p>
-                    </div>
-
-                    <form method="POST" class="space-y-6">
-                        <input type="hidden" name="step" value="2">
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Host do Banco</label>
-                            <input type="text" name="db_host" value="localhost" required
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-minecraft-500 focus:border-minecraft-500">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Usuário do Banco</label>
-                            <input type="text" name="db_user" value="root" required
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-minecraft-500 focus:border-minecraft-500">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Senha do Banco</label>
-                            <input type="password" name="db_pass" placeholder="Deixe vazio se não houver senha"
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-minecraft-500 focus:border-minecraft-500">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Nome do Banco</label>
-                            <input type="text" name="db_name" value="minecraft_monitor" required
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-minecraft-500 focus:border-minecraft-500">
-                            <p class="text-sm text-gray-500 mt-1">O banco será criado automaticamente se não existir</p>
-                        </div>
-
-                        <button type="submit" class="w-full bg-minecraft-600 hover:bg-minecraft-700 text-white font-medium py-3 px-4 rounded-lg transition-colors">
-                            Testar Conexão e Criar Estrutura
-                        </button>
-                    </form>
-
-                <?php elseif ($step == 3): ?>
-                    <!-- Step 3: Admin User Creation -->
-                    <div class="mb-6">
-                        <h2 class="text-2xl font-bold text-gray-900 mb-4">Criar Usuário Administrador</h2>
-                        <p class="text-gray-600 mb-6">O banco e tabelas foram criados com sucesso! Agora defina as credenciais do usuário administrador.</p>
-                    </div>
-
-                    <form method="POST" class="space-y-6">
-                        <input type="hidden" name="step" value="3">
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Nome de Usuário</label>
-                            <input type="text" name="admin_user" value="admin" required
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-minecraft-500 focus:border-minecraft-500">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Senha</label>
-                            <input type="password" name="admin_pass" required minlength="6"
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-minecraft-500 focus:border-minecraft-500">
-                            <p class="text-sm text-gray-500 mt-1">Mínimo 6 caracteres</p>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Confirmar Senha</label>
-                            <input type="password" name="admin_pass_confirm" required minlength="6"
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-minecraft-500 focus:border-minecraft-500">
-                        </div>
-
-                        <button type="submit" class="w-full bg-minecraft-600 hover:bg-minecraft-700 text-white font-medium py-3 px-4 rounded-lg transition-colors">
-                            Criar Usuário e Finalizar Instalação
-                        </button>
-                    </form>
-
-                <?php elseif ($step == 4): ?>
-                    <!-- Step 4: Installation Complete -->
-                    <div class="text-center">
-                        <div class="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                        </div>
-                        
-                        <h2 class="text-2xl font-bold text-gray-900 mb-4">🎉 Instalação Concluída!</h2>
-                        <p class="text-gray-600 mb-8">O sistema foi instalado com sucesso. Banco criado, tabelas estruturadas e usuário administrador configurado.</p>
-                        
-                        <div class="bg-gray-50 rounded-lg p-6 mb-6">
-                            <h3 class="font-semibold text-gray-900 mb-4">📋 Próximos Passos:</h3>
-                            <ol class="text-left text-gray-700 space-y-3">
-                                <li class="flex items-start">
-                                    <span class="flex-shrink-0 w-6 h-6 bg-minecraft-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3 mt-0.5">1</span>
-                                    <div>
-                                        <strong>Iniciar Interface React:</strong><br>
-                                        Execute <code class="bg-gray-200 px-2 py-1 rounded text-sm">npm run dev</code> no terminal
-                                    </div>
-                                </li>
-                                <li class="flex items-start">
-                                    <span class="flex-shrink-0 w-6 h-6 bg-minecraft-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3 mt-0.5">2</span>
-                                    <div>
-                                        <strong>Acessar Sistema:</strong><br>
-                                        Abra <code class="bg-gray-200 px-2 py-1 rounded text-sm">http://localhost:5173</code> no navegador
-                                    </div>
-                                </li>
-                                <li class="flex items-start">
-                                    <span class="flex-shrink-0 w-6 h-6 bg-minecraft-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3 mt-0.5">3</span>
-                                    <div>
-                                        <strong>Configurar Servidor:</strong><br>
-                                        Na aba "Settings", configure o caminho do seu arquivo <code class="bg-gray-200 px-2 py-1 rounded text-sm">.bat</code>
-                                    </div>
-                                </li>
-                                <li class="flex items-start">
-                                    <span class="flex-shrink-0 w-6 h-6 bg-minecraft-600 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3 mt-0.5">4</span>
-                                    <div>
-                                        <strong>Habilitar RCON (Opcional):</strong><br>
-                                        No <code class="bg-gray-200 px-2 py-1 rounded text-sm">server.properties</code>: <code class="bg-gray-200 px-2 py-1 rounded text-sm">enable-rcon=true</code>
-                                    </div>
-                                </li>
-                            </ol>
-                        </div>
-
-                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                            <h4 class="font-semibold text-blue-900 mb-2">💡 Dicas Importantes:</h4>
-                            <ul class="text-blue-800 text-sm space-y-1 text-left">
-                                <li>• Mantenha o XAMPP (Apache + MySQL) sempre rodando</li>
-                                <li>• Faça backup regular do banco de dados</li>
-                                <li>• Configure caminhos corretos nas configurações</li>
-                                <li>• Use RCON para comandos remotos no console</li>
-                            </ul>
-                        </div>
-                        
-                        <div class="flex space-x-4">
-                            <a href="http://localhost:5173" target="_blank" class="flex-1 bg-minecraft-600 hover:bg-minecraft-700 text-white font-medium py-3 px-6 rounded-lg transition-colors">
-                                🚀 Abrir Sistema
-                            </a>
-                            <a href="../README.md" target="_blank" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg transition-colors">
-                                📖 Ver Documentação
-                            </a>
-                        </div>
-                    </div>
-                <?php endif; ?>
-            </div>
-
-            <!-- Footer -->
-            <div class="text-center mt-8">
-                <p class="text-gray-500 text-sm">
-                    Minecraft Server Monitor - Prominence II RPG Edition<br>
-                    <span class="text-xs">Sistema de monitoramento completo para servidores Minecraft</span>
-                </p>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // Auto-refresh na verificação do sistema
-        <?php if ($step == 1 && !$allPassed): ?>
-        setTimeout(() => {
-            location.reload();
-        }, 5000);
-        <?php endif; ?>
-    </script>
-</body>
-</html>
-
 <?php
 // Sistema de instalação automática
 session_start();
@@ -308,12 +8,13 @@ if (file_exists('installed.lock')) {
     exit;
 }
 
-$step = $_GET['step'] ?? 1;
+$step = isset($_GET['step']) ? (int)$_GET['step'] : 1;
 $error = '';
 $success = '';
+$allPassed = true;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if ($step == 2) {
+    if ($_POST['step'] == 2) {
         // Testar conexão com banco e criar estrutura
         $host = $_POST['db_host'] ?? 'localhost';
         $user = $_POST['db_user'] ?? 'root';
@@ -401,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'Erro de conexão com banco: ' . $e->getMessage();
         }
         
-    } elseif ($step == 3) {
+    } elseif ($_POST['step'] == 3) {
         // Criar usuário administrador
         $admin_user = trim($_POST['admin_user'] ?? 'admin');
         $admin_pass = $_POST['admin_pass'] ?? '';
@@ -513,4 +214,340 @@ if (\$_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
         }
     }
 }
+
+// Verificações do sistema para step 1
+if ($step == 1) {
+    $checks = [
+        'PHP Version' => version_compare(PHP_VERSION, '7.4.0', '>='),
+        'PDO Extension' => extension_loaded('pdo'),
+        'PDO MySQL' => extension_loaded('pdo_mysql'),
+        'JSON Extension' => extension_loaded('json'),
+        'Session Support' => function_exists('session_start'),
+        'File Write Permission' => is_writable(__DIR__)
+    ];
+    
+    $allPassed = true;
+    foreach ($checks as $check => $result) {
+        if (!$result) $allPassed = false;
+    }
+}
 ?>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instalação - Minecraft Server Monitor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        .card { 
+            background: white; 
+            border-radius: 16px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        .header { text-align: center; margin-bottom: 2rem; }
+        .logo { 
+            width: 64px; height: 64px; 
+            background: #16a34a; 
+            border-radius: 16px; 
+            margin: 0 auto 1rem;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 24px; font-weight: bold;
+        }
+        h1 { color: #1f2937; margin-bottom: 0.5rem; font-size: 2rem; }
+        .subtitle { color: #6b7280; }
+        .progress { margin-bottom: 2rem; }
+        .progress-bar { 
+            width: 100%; height: 8px; 
+            background: #e5e7eb; border-radius: 4px; 
+            overflow: hidden;
+        }
+        .progress-fill { 
+            height: 100%; background: #16a34a; 
+            transition: width 0.3s ease;
+        }
+        .progress-text { 
+            display: flex; justify-content: space-between; 
+            margin-bottom: 0.5rem; font-size: 0.875rem; 
+            color: #16a34a; font-weight: 600;
+        }
+        .alert { 
+            padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;
+            display: flex; align-items: center;
+        }
+        .alert-error { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; }
+        .alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #16a34a; }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-label { 
+            display: block; margin-bottom: 0.5rem; 
+            font-weight: 600; color: #374151;
+        }
+        .form-input { 
+            width: 100%; padding: 0.75rem; 
+            border: 1px solid #d1d5db; border-radius: 8px;
+            font-size: 1rem; transition: border-color 0.2s;
+        }
+        .form-input:focus { 
+            outline: none; border-color: #16a34a; 
+            box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+        }
+        .form-help { font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem; }
+        .btn { 
+            display: inline-block; padding: 0.75rem 1.5rem;
+            background: #16a34a; color: white; text-decoration: none;
+            border-radius: 8px; font-weight: 600; text-align: center;
+            border: none; cursor: pointer; font-size: 1rem;
+            transition: background-color 0.2s;
+        }
+        .btn:hover { background: #15803d; }
+        .btn:disabled { background: #9ca3af; cursor: not-allowed; }
+        .btn-block { width: 100%; }
+        .check-list { margin-bottom: 1.5rem; }
+        .check-item { 
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0.75rem; background: #f9fafb; border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+        .check-status { font-weight: 600; }
+        .check-ok { color: #16a34a; }
+        .check-fail { color: #dc2626; }
+        .steps { margin-bottom: 2rem; }
+        .step { 
+            display: flex; align-items: flex-start; margin-bottom: 1rem;
+            padding: 1rem; background: #f9fafb; border-radius: 8px;
+        }
+        .step-number { 
+            width: 32px; height: 32px; background: #16a34a; color: white;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-weight: bold; margin-right: 1rem; flex-shrink: 0;
+        }
+        .step-content strong { display: block; margin-bottom: 0.25rem; }
+        .code { 
+            background: #f3f4f6; padding: 0.25rem 0.5rem; 
+            border-radius: 4px; font-family: monospace; font-size: 0.875rem;
+        }
+        .info-box { 
+            background: #eff6ff; border: 1px solid #bfdbfe; 
+            border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;
+        }
+        .info-title { font-weight: 600; color: #1e40af; margin-bottom: 0.5rem; }
+        .info-list { color: #1e40af; font-size: 0.875rem; }
+        .info-list li { margin-bottom: 0.25rem; }
+        .flex { display: flex; gap: 1rem; }
+        .flex > * { flex: 1; }
+        .text-center { text-align: center; }
+        .success-icon { 
+            width: 64px; height: 64px; background: #dcfce7; 
+            border-radius: 50%; margin: 0 auto 1rem;
+            display: flex; align-items: center; justify-content: center;
+            color: #16a34a; font-size: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">🛡️</div>
+            <h1>Minecraft Server Monitor</h1>
+            <p class="subtitle">Instalação e Configuração Inicial</p>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress">
+            <div class="progress-text">
+                <span>Progresso da Instalação</span>
+                <span><?php echo $step; ?>/4</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: <?php echo ($step/4)*100; ?>%"></div>
+            </div>
+        </div>
+
+        <!-- Main Card -->
+        <div class="card">
+            <?php if ($error): ?>
+                <div class="alert alert-error">
+                    <span style="margin-right: 0.5rem;">❌</span>
+                    <?php echo htmlspecialchars($error); ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($success): ?>
+                <div class="alert alert-success">
+                    <span style="margin-right: 0.5rem;">✅</span>
+                    <?php echo htmlspecialchars($success); ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($step == 1): ?>
+                <!-- Step 1: System Check -->
+                <h2 style="margin-bottom: 1rem; color: #1f2937;">Verificação do Sistema</h2>
+                <p style="color: #6b7280; margin-bottom: 1.5rem;">Verificando se todos os requisitos estão atendidos...</p>
+
+                <div class="check-list">
+                    <?php foreach ($checks as $check => $result): ?>
+                        <div class="check-item">
+                            <span><?php echo $check; ?></span>
+                            <span class="check-status <?php echo $result ? 'check-ok' : 'check-fail'; ?>">
+                                <?php echo $result ? '✅ OK' : '❌ FALHOU'; ?>
+                            </span>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+
+                <?php if ($allPassed): ?>
+                    <a href="?step=2" class="btn btn-block">Continuar para Configuração do Banco</a>
+                <?php else: ?>
+                    <div class="alert alert-error">
+                        <div>
+                            <strong>Requisitos não atendidos!</strong><br>
+                            Corrija os problemas acima antes de continuar. Verifique se o XAMPP está configurado corretamente.
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+            <?php elseif ($step == 2): ?>
+                <!-- Step 2: Database Configuration -->
+                <h2 style="margin-bottom: 1rem; color: #1f2937;">Configuração do Banco de Dados</h2>
+                <p style="color: #6b7280; margin-bottom: 1.5rem;">Configure a conexão com o MySQL do XAMPP. O banco e todas as tabelas serão criados automaticamente.</p>
+
+                <form method="POST">
+                    <input type="hidden" name="step" value="2">
+                    
+                    <div class="form-group">
+                        <label class="form-label">Host do Banco</label>
+                        <input type="text" name="db_host" value="localhost" required class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Usuário do Banco</label>
+                        <input type="text" name="db_user" value="root" required class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Senha do Banco</label>
+                        <input type="password" name="db_pass" placeholder="Deixe vazio se não houver senha" class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Nome do Banco</label>
+                        <input type="text" name="db_name" value="minecraft_monitor" required class="form-input">
+                        <p class="form-help">O banco será criado automaticamente se não existir</p>
+                    </div>
+
+                    <button type="submit" class="btn btn-block">Testar Conexão e Criar Estrutura</button>
+                </form>
+
+            <?php elseif ($step == 3): ?>
+                <!-- Step 3: Admin User Creation -->
+                <h2 style="margin-bottom: 1rem; color: #1f2937;">Criar Usuário Administrador</h2>
+                <p style="color: #6b7280; margin-bottom: 1.5rem;">O banco e tabelas foram criados com sucesso! Agora defina as credenciais do usuário administrador.</p>
+
+                <form method="POST">
+                    <input type="hidden" name="step" value="3">
+                    
+                    <div class="form-group">
+                        <label class="form-label">Nome de Usuário</label>
+                        <input type="text" name="admin_user" value="admin" required class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Senha</label>
+                        <input type="password" name="admin_pass" required minlength="6" class="form-input">
+                        <p class="form-help">Mínimo 6 caracteres</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Confirmar Senha</label>
+                        <input type="password" name="admin_pass_confirm" required minlength="6" class="form-input">
+                    </div>
+
+                    <button type="submit" class="btn btn-block">Criar Usuário e Finalizar Instalação</button>
+                </form>
+
+            <?php elseif ($step == 4): ?>
+                <!-- Step 4: Installation Complete -->
+                <div class="text-center">
+                    <div class="success-icon">🎉</div>
+                    <h2 style="margin-bottom: 1rem; color: #1f2937;">Instalação Concluída!</h2>
+                    <p style="color: #6b7280; margin-bottom: 2rem;">O sistema foi instalado com sucesso. Banco criado, tabelas estruturadas e usuário administrador configurado.</p>
+                    
+                    <div class="info-box">
+                        <div class="info-title">📋 Próximos Passos:</div>
+                        <div class="steps">
+                            <div class="step">
+                                <div class="step-number">1</div>
+                                <div class="step-content">
+                                    <strong>Iniciar Interface React:</strong>
+                                    Execute <span class="code">npm run dev</span> no terminal
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">2</div>
+                                <div class="step-content">
+                                    <strong>Acessar Sistema:</strong>
+                                    Abra <span class="code">http://localhost:5173</span> no navegador
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">3</div>
+                                <div class="step-content">
+                                    <strong>Configurar Servidor:</strong>
+                                    Na aba "Settings", configure o caminho do seu arquivo <span class="code">.bat</span>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">4</div>
+                                <div class="step-content">
+                                    <strong>Habilitar RCON (Opcional):</strong>
+                                    No <span class="code">server.properties</span>: <span class="code">enable-rcon=true</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+                        <div style="font-weight: 600; color: #1e40af; margin-bottom: 0.5rem;">💡 Dicas Importantes:</div>
+                        <ul style="color: #1e40af; font-size: 0.875rem; text-align: left;">
+                            <li>• Mantenha o XAMPP (Apache + MySQL) sempre rodando</li>
+                            <li>• Faça backup regular do banco de dados</li>
+                            <li>• Configure caminhos corretos nas configurações</li>
+                            <li>• Use RCON para comandos remotos no console</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="flex">
+                        <a href="http://localhost:5173" target="_blank" class="btn">🚀 Abrir Sistema</a>
+                        <a href="../README.md" target="_blank" class="btn" style="background: #6b7280;">📖 Ver Documentação</a>
+                    </div>
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <!-- Footer -->
+        <div style="text-align: center; color: #6b7280; font-size: 0.875rem;">
+            Minecraft Server Monitor - Prominence II RPG Edition<br>
+            <span style="font-size: 0.75rem;">Sistema de monitoramento completo para servidores Minecraft</span>
+        </div>
+    </div>
+
+    <?php if ($step == 1 && !$allPassed): ?>
+    <script>
+        // Auto-refresh na verificação do sistema se houver falhas
+        setTimeout(() => {
+            location.reload();
+        }, 5000);
+    </script>
+    <?php endif; ?>
+</body>
+</html>
