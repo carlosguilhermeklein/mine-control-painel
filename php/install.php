@@ -4,7 +4,7 @@ session_start();
 
 // Verificar se já foi instalado
 if (file_exists('installed.lock')) {
-    header('Location: ../index.html');
+    header('Location: web-launcher.html');
     exit;
 }
 
@@ -483,51 +483,27 @@ if ($step == 1) {
                     <p style="color: #6b7280; margin-bottom: 2rem;">O sistema foi instalado com sucesso. Banco criado, tabelas estruturadas e usuário administrador configurado.</p>
                     
                     <div class="info-box">
-                        <div class="info-title">📋 Próximos Passos:</div>
-                        <div class="steps">
-                            <div class="step">
-                                <div class="step-number">1</div>
-                                <div class="step-content">
-                                    <strong>Iniciar Interface React:</strong>
-                                    Execute <span class="code">npm run dev</span> no terminal
-                                </div>
-                            </div>
-                            <div class="step">
-                                <div class="step-number">2</div>
-                                <div class="step-content">
-                                    <strong>Acessar Sistema:</strong>
-                                    Abra <span class="code">http://localhost:5173</span> no navegador
-                                </div>
-                            </div>
-                            <div class="step">
-                                <div class="step-number">3</div>
-                                <div class="step-content">
-                                    <strong>Configurar Servidor:</strong>
-                                    Na aba "Settings", configure o caminho do seu arquivo <span class="code">.bat</span>
-                                </div>
-                            </div>
-                            <div class="step">
-                                <div class="step-number">4</div>
-                                <div class="step-content">
-                                    <strong>Habilitar RCON (Opcional):</strong>
-                                    No <span class="code">server.properties</span>: <span class="code">enable-rcon=true</span>
-                                </div>
-                            </div>
-                        </div>
+                        <div class="info-title">🚀 Sistema Pronto!</div>
+                        <p style="color: #1e40af; margin-bottom: 1rem;">
+                            Agora você pode usar o <strong>Launcher Web</strong> para controlar tudo pelo navegador!
+                        </p>
+                        <p style="color: #1e40af; font-size: 0.9rem;">
+                            O launcher web permite iniciar, parar e gerenciar o sistema sem usar comandos no terminal.
+                        </p>
                     </div>
 
                     <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
-                        <div style="font-weight: 600; color: #1e40af; margin-bottom: 0.5rem;">💡 Dicas Importantes:</div>
+                        <div style="font-weight: 600; color: #1e40af; margin-bottom: 0.5rem;">💡 Próximos Passos:</div>
                         <ul style="color: #1e40af; font-size: 0.875rem; text-align: left;">
-                            <li>• Mantenha o XAMPP (Apache + MySQL) sempre rodando</li>
-                            <li>• Faça backup regular do banco de dados</li>
-                            <li>• Configure caminhos corretos nas configurações</li>
-                            <li>• Use RCON para comandos remotos no console</li>
+                            <li>• Use o <strong>Launcher Web</strong> para controlar o sistema</li>
+                            <li>• Configure seu servidor Minecraft nas configurações</li>
+                            <li>• Habilite RCON para comandos remotos</li>
+                            <li>• Mantenha o XAMPP sempre rodando</li>
                         </ul>
                     </div>
                     
                     <div class="flex">
-                        <a href="http://localhost:5173" target="_blank" class="btn">🚀 Abrir Sistema</a>
+                        <a href="web-launcher.html" class="btn">🚀 Abrir Launcher Web</a>
                         <a href="../README.md" target="_blank" class="btn" style="background: #6b7280;">📖 Ver Documentação</a>
                     </div>
                 </div>
@@ -537,7 +513,7 @@ if ($step == 1) {
         <!-- Footer -->
         <div style="text-align: center; color: #6b7280; font-size: 0.875rem;">
             Minecraft Server Monitor - Prominence II RPG Edition<br>
-            <span style="font-size: 0.75rem;">Sistema de monitoramento completo para servidores Minecraft</span>
+            <span style="font-size: 0.75rem;">Sistema completo - Tudo pelo navegador!</span>
         </div>
     </div>
 
