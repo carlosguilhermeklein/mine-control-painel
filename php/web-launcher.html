@@ -312,16 +312,33 @@
             try {
                 const response = await fetch('launcher.php', {
                     method: 'GET',
-                    cache: 'no-cache'
+                    cache: 'no-cache',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
                 });
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
                 
-                const data = await response.json();
-                lastResponse = data;
+                const responseText = await response.text();
                 
+                // Verificar se a resposta é JSON válido
+                if (!responseText.trim()) {
+                    throw new Error('Resposta vazia do servidor');
+                }
+                
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (jsonError) {
+                    console.error('Resposta não é JSON válido:', responseText);
+                    throw new Error('Resposta inválida do servidor: ' + responseText.substring(0, 100));
+                }
+                
+                lastResponse = data;
                 updateStatusDisplay(data);
                 updateButtons(data.running);
                 
@@ -371,7 +388,10 @@
             try {
                 const response = await fetch('launcher.php', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
                     body: JSON.stringify({ action: 'start_dev_server' })
                 });
                 
@@ -379,7 +399,20 @@
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
                 
-                const data = await response.json();
+                const responseText = await response.text();
+                
+                // Verificar se a resposta é JSON válido
+                if (!responseText.trim()) {
+                    throw new Error('Resposta vazia do servidor');
+                }
+                
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (jsonError) {
+                    console.error('Resposta não é JSON válido:', responseText);
+                    throw new Error('Resposta inválida do servidor: ' + responseText.substring(0, 200));
+                }
                 
                 if (data.success) {
                     showAlert(data.message, 'success');
@@ -408,7 +441,7 @@
                     }
                     
                     // Mostrar informações de debug se disponíveis
-                    if (data.node_output || data.npm_output || data.install_output) {
+                    if (data.node_check || data.npm_check || data.install_output) {
                         addLog('🔍 Informações de debug disponíveis (veja console do navegador)', 'warning');
                         console.log('Debug Info:', data);
                     }
@@ -435,7 +468,10 @@
             try {
                 const response = await fetch('launcher.php', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
                     body: JSON.stringify({ action: 'stop_dev_server' })
                 });
                 
@@ -443,7 +479,15 @@
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
                 
-                const data = await response.json();
+                const responseText = await response.text();
+                
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (jsonError) {
+                    console.error('Resposta não é JSON válido:', responseText);
+                    throw new Error('Resposta inválida do servidor');
+                }
                 
                 if (data.success) {
                     showAlert(data.message, 'success');
@@ -470,16 +514,22 @@
                 // Tentar abrir automaticamente via API
                 const response = await fetch('launcher.php', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
                     body: JSON.stringify({ action: 'open_browser' })
                 });
                 
                 if (response.ok) {
-                    const data = await response.json();
-                    if (data.success) {
-                        showAlert('Sistema aberto no navegador!', 'success');
-                        addLog('🌐 Sistema aberto automaticamente', 'success');
-                        return;
+                    const responseText = await response.text();
+                    if (responseText.trim()) {
+                        const data = JSON.parse(responseText);
+                        if (data.success) {
+                            showAlert('Sistema aberto no navegador!', 'success');
+                            addLog('🌐 Sistema aberto automaticamente', 'success');
+                            return;
+                        }
                     }
                 }
                 
