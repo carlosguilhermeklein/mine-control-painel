@@ -99,7 +99,7 @@
         }
         .alert { 
             padding: 1rem; border-radius: 12px; margin-bottom: 1.5rem;
-            display: flex; align-items: center;
+            display: flex; align-items: flex-start;
             backdrop-filter: blur(10px);
         }
         .alert-success { 
@@ -158,19 +158,34 @@
             padding: 1rem;
             font-family: 'Courier New', monospace;
             font-size: 0.875rem;
-            max-height: 200px;
+            max-height: 300px;
             overflow-y: auto;
             margin-top: 1rem;
         }
         .log-entry {
             color: #22c55e;
             margin-bottom: 0.25rem;
+            word-wrap: break-word;
         }
         .log-error { color: #ef4444; }
         .log-info { color: #3b82f6; }
+        .log-warning { color: #f59e0b; }
         @media (max-width: 768px) {
             .controls { flex-direction: column; align-items: center; }
             .btn { width: 100%; max-width: 300px; }
+            .status-card { flex-direction: column; text-align: center; gap: 1rem; }
+        }
+        .debug-info {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            max-height: 200px;
+            overflow-y: auto;
         }
     </style>
 </head>
@@ -267,6 +282,12 @@
                 <p><strong>4.</strong> Configure seu servidor Minecraft na aba "Settings"</p>
                 <p><strong>5.</strong> Use "Parar Sistema" quando terminar de usar</p>
             </div>
+            
+            <div style="margin-top: 1rem; padding: 1rem; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px;">
+                <p style="color: #3b82f6; font-size: 0.9rem;">
+                    <strong>💡 Primeira vez?</strong> O sistema pode demorar um pouco mais para iniciar pois precisa baixar as dependências do Node.js. Seja paciente!
+                </p>
+            </div>
         </div>
 
         <!-- Footer -->
@@ -278,6 +299,7 @@
 
     <script>
         let statusCheckInterval;
+        let lastResponse = null;
         
         // Verificar status inicial
         document.addEventListener('DOMContentLoaded', function() {
@@ -288,15 +310,28 @@
 
         async function checkStatus() {
             try {
-                const response = await fetch('launcher.php');
+                const response = await fetch('launcher.php', {
+                    method: 'GET',
+                    cache: 'no-cache'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const data = await response.json();
+                lastResponse = data;
                 
                 updateStatusDisplay(data);
                 updateButtons(data.running);
                 
             } catch (error) {
                 console.error('Erro ao verificar status:', error);
-                showAlert('Erro ao verificar status do sistema', 'error');
+                updateStatusDisplay({
+                    running: false,
+                    message: 'Erro de conexão: ' + error.message
+                });
+                updateButtons(false);
             }
         }
 
@@ -340,26 +375,50 @@
                     body: JSON.stringify({ action: 'start_dev_server' })
                 });
                 
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const data = await response.json();
                 
                 if (data.success) {
                     showAlert(data.message, 'success');
                     addLog('✅ ' + data.message, 'success');
+                    
                     if (data.url) {
                         addLog('🌐 Sistema disponível em: ' + data.url, 'info');
                     }
+                    
+                    if (data.node_version) {
+                        addLog(`📦 Node.js: ${data.node_version}, NPM: ${data.npm_version}`, 'info');
+                    }
+                    
+                    if (data.already_running) {
+                        addLog('ℹ️ Sistema já estava rodando', 'info');
+                    }
+                    
                     setTimeout(checkStatus, 2000);
                 } else {
                     showAlert(data.message, 'error');
                     addLog('❌ ' + data.message, 'error');
+                    
                     if (data.install_url) {
-                        showAlert(`<a href="${data.install_url}" target="_blank" style="color: #3b82f6;">Clique aqui para baixar o Node.js</a>`, 'info');
+                        showAlert(`<a href="${data.install_url}" target="_blank" style="color: #3b82f6; text-decoration: underline;">Clique aqui para baixar o Node.js</a>`, 'info');
+                        addLog('💡 Baixe o Node.js em: ' + data.install_url, 'warning');
+                    }
+                    
+                    // Mostrar informações de debug se disponíveis
+                    if (data.node_output || data.npm_output || data.install_output) {
+                        addLog('🔍 Informações de debug disponíveis (veja console do navegador)', 'warning');
+                        console.log('Debug Info:', data);
                     }
                 }
                 
             } catch (error) {
-                showAlert('Erro ao iniciar sistema: ' + error.message, 'error');
-                addLog('❌ Erro: ' + error.message, 'error');
+                const errorMsg = 'Erro ao iniciar sistema: ' + error.message;
+                showAlert(errorMsg, 'error');
+                addLog('❌ ' + errorMsg, 'error');
+                console.error('Erro completo:', error);
             } finally {
                 startBtn.disabled = false;
                 startBtnText.textContent = '🚀 Iniciar Sistema';
@@ -380,6 +439,10 @@
                     body: JSON.stringify({ action: 'stop_dev_server' })
                 });
                 
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const data = await response.json();
                 
                 if (data.success) {
@@ -393,8 +456,9 @@
                 setTimeout(checkStatus, 2000);
                 
             } catch (error) {
-                showAlert('Erro ao parar sistema: ' + error.message, 'error');
-                addLog('❌ Erro: ' + error.message, 'error');
+                const errorMsg = 'Erro ao parar sistema: ' + error.message;
+                showAlert(errorMsg, 'error');
+                addLog('❌ ' + errorMsg, 'error');
             } finally {
                 stopBtn.disabled = false;
                 stopBtn.textContent = '⏹️ Parar Sistema';
@@ -403,27 +467,32 @@
 
         async function openSystem() {
             try {
-                // Tentar abrir automaticamente
+                // Tentar abrir automaticamente via API
                 const response = await fetch('launcher.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ action: 'open_browser' })
                 });
                 
-                const data = await response.json();
-                
-                if (data.success) {
-                    showAlert('Sistema aberto no navegador!', 'success');
-                } else {
-                    // Fallback: abrir manualmente
-                    window.open('http://localhost:5173', '_blank');
-                    showAlert('Sistema aberto em nova aba!', 'success');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        showAlert('Sistema aberto no navegador!', 'success');
+                        addLog('🌐 Sistema aberto automaticamente', 'success');
+                        return;
+                    }
                 }
+                
+                // Fallback: abrir manualmente
+                window.open('http://localhost:5173', '_blank');
+                showAlert('Sistema aberto em nova aba!', 'success');
+                addLog('🌐 Sistema aberto em nova aba', 'info');
                 
             } catch (error) {
                 // Fallback: abrir manualmente
                 window.open('http://localhost:5173', '_blank');
                 showAlert('Sistema aberto em nova aba!', 'success');
+                addLog('🌐 Sistema aberto em nova aba (fallback)', 'info');
             }
         }
 
@@ -432,19 +501,19 @@
             const alert = document.createElement('div');
             alert.className = `alert alert-${type}`;
             alert.innerHTML = `
-                <span style="margin-right: 0.5rem;">${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span>
-                ${message}
+                <span style="margin-right: 0.5rem; flex-shrink: 0;">${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span>
+                <div>${message}</div>
             `;
             
             container.innerHTML = '';
             container.appendChild(alert);
             
-            // Remover após 5 segundos
+            // Remover após 8 segundos
             setTimeout(() => {
                 if (alert.parentNode) {
                     alert.parentNode.removeChild(alert);
                 }
-            }, 5000);
+            }, 8000);
         }
 
         function showLogs() {
@@ -460,11 +529,20 @@
             logs.appendChild(entry);
             logs.scrollTop = logs.scrollHeight;
             
-            // Manter apenas os últimos 50 logs
-            while (logs.children.length > 50) {
+            // Manter apenas os últimos 100 logs
+            while (logs.children.length > 100) {
                 logs.removeChild(logs.firstChild);
             }
         }
+
+        // Debug: Mostrar última resposta no console
+        window.getLastResponse = () => lastResponse;
+        window.showDebugInfo = () => {
+            if (lastResponse) {
+                console.log('Última resposta do servidor:', lastResponse);
+                addLog('🔍 Informações de debug mostradas no console', 'info');
+            }
+        };
     </script>
 </body>
 </html>
