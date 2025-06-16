@@ -245,6 +245,35 @@
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
+        .troubleshooting {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+        }
+        .troubleshooting h4 {
+            color: #ef4444;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .troubleshooting ul {
+            color: #fca5a5;
+            list-style: none;
+            padding-left: 0;
+        }
+        .troubleshooting li {
+            margin-bottom: 0.5rem;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+        .troubleshooting li:before {
+            content: "💡";
+            position: absolute;
+            left: 0;
+        }
         @media (max-width: 768px) {
             .controls { flex-direction: column; align-items: center; }
             .btn { width: 100%; max-width: 300px; }
@@ -315,6 +344,23 @@
                         </span>
                     </h4>
                     <div id="detailedLogs"></div>
+                </div>
+            </div>
+
+            <!-- Troubleshooting -->
+            <div id="troubleshootingContainer" style="display: none;">
+                <div class="troubleshooting">
+                    <h4>
+                        🔧 Solução de Problemas
+                    </h4>
+                    <ul>
+                        <li>Verifique se o Node.js está instalado corretamente</li>
+                        <li>Tente executar "npm install" manualmente na pasta do projeto</li>
+                        <li>Verifique se não há antivírus bloqueando o Node.js</li>
+                        <li>Certifique-se de que a porta 5173 não está sendo usada por outro programa</li>
+                        <li>Tente reiniciar o computador e executar novamente</li>
+                        <li>Se o problema persistir, execute "npm run dev" manualmente no terminal</li>
+                    </ul>
                 </div>
             </div>
 
@@ -536,6 +582,7 @@
                     }
                     
                     updateProgress(0, 'Falha na inicialização');
+                    showTroubleshooting();
                 }
                 
             } catch (error) {
@@ -543,6 +590,7 @@
                 showAlert(errorMsg, 'error');
                 addLog('❌ ' + errorMsg, 'error');
                 updateProgress(0, 'Erro durante inicialização');
+                showTroubleshooting();
                 console.error('Erro completo:', error);
             } finally {
                 startBtn.disabled = false;
@@ -665,10 +713,6 @@
             }, 8000);
         }
 
-        function showLogs() {
-            document.getElementById('logsContainer').style.display = 'block';
-        }
-
         function showDetailedLogs() {
             document.getElementById('detailedLogsContainer').style.display = 'block';
             detailedLogsVisible = true;
@@ -676,6 +720,10 @@
 
         function showProgress() {
             document.getElementById('progressContainer').style.display = 'block';
+        }
+
+        function showTroubleshooting() {
+            document.getElementById('troubleshootingContainer').style.display = 'block';
         }
 
         function updateProgress(percentage, text) {
@@ -690,6 +738,7 @@
             const detailedLogs = document.getElementById('detailedLogs');
             detailedLogs.innerHTML = '';
             currentLogs = [];
+            document.getElementById('troubleshootingContainer').style.display = 'none';
         }
 
         function processDetailedLogs(logs) {
@@ -742,7 +791,7 @@
             if (errorSteps > 0) {
                 updateProgress(0, 'Erro durante execução');
             } else {
-                const percentage = (completedSteps / totalSteps) * 100;
+                const percentage = Math.min((completedSteps / Math.max(totalSteps, 10)) * 100, 100);
                 updateProgress(percentage, `${completedSteps}/${totalSteps} etapas concluídas`);
             }
             
@@ -785,6 +834,10 @@
             }
             
             showLogs();
+        }
+
+        function showLogs() {
+            document.getElementById('logsContainer').style.display = 'block';
         }
 
         // Debug: Mostrar última resposta no console

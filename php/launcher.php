@@ -195,6 +195,15 @@ function startDevServer() {
             $logs[] = ['step' => 'deps_check', 'message' => 'Dependências já estão instaladas', 'status' => 'success'];
         }
         
+        // Verificar se há processos antigos na porta 5173
+        $logs[] = ['step' => 'port_cleanup', 'message' => 'Verificando processos antigos na porta 5173...', 'status' => 'info'];
+        $cleanupResult = cleanupPort5173();
+        if ($cleanupResult['cleaned']) {
+            $logs[] = ['step' => 'port_cleanup', 'message' => 'Processos antigos removidos da porta 5173', 'status' => 'success'];
+        } else {
+            $logs[] = ['step' => 'port_cleanup', 'message' => 'Porta 5173 está limpa', 'status' => 'success'];
+        }
+        
         // Iniciar servidor de desenvolvimento
         $logs[] = ['step' => 'server_start', 'message' => 'Iniciando servidor de desenvolvimento...', 'status' => 'info'];
         $logs[] = ['step' => 'server_start', 'message' => 'Executando: npm run dev', 'status' => 'info'];
@@ -212,19 +221,19 @@ function startDevServer() {
         }
         
         // Aguardar um pouco para o servidor iniciar
-        $logs[] = ['step' => 'server_wait', 'message' => 'Aguardando servidor inicializar...', 'status' => 'info'];
-        sleep(3);
+        $logs[] = ['step' => 'server_wait', 'message' => 'Aguardando servidor inicializar (5 segundos)...', 'status' => 'info'];
+        sleep(5); // Aumentar tempo de espera inicial
         
         // Verificar se iniciou com sucesso (tentar várias vezes)
         $attempts = 0;
-        $maxAttempts = 15;
+        $maxAttempts = 20; // Aumentar tentativas
         
         $logs[] = ['step' => 'server_verify', 'message' => 'Verificando se servidor está respondendo...', 'status' => 'info'];
         
         while ($attempts < $maxAttempts) {
             $newStatus = checkDevServerStatus();
             if ($newStatus['running']) {
-                $logs[] = ['step' => 'server_verify', 'message' => "Servidor respondendo após {$attempts} tentativas!", 'status' => 'success'];
+                $logs[] = ['step' => 'server_verify', 'message' => "Servidor respondendo após " . ($attempts + 1) . " tentativas!", 'status' => 'success'];
                 $logs[] = ['step' => 'complete', 'message' => 'Sistema iniciado com sucesso!', 'status' => 'success'];
                 
                 return [
@@ -238,20 +247,30 @@ function startDevServer() {
                 ];
             }
             
-            $logs[] = ['step' => 'server_verify', 'message' => "Tentativa {$attempts + 1}/{$maxAttempts} - aguardando...", 'status' => 'info'];
-            sleep(2);
+            $logs[] = ['step' => 'server_verify', 'message' => "Tentativa " . ($attempts + 1) . "/{$maxAttempts} - aguardando resposta...", 'status' => 'info'];
+            sleep(3); // Aumentar tempo entre tentativas
             $attempts++;
         }
         
+        // Se chegou aqui, o servidor não respondeu
         $logs[] = ['step' => 'server_verify', 'message' => 'Servidor não respondeu após todas as tentativas', 'status' => 'warning'];
+        
+        // Tentar diagnóstico adicional
+        $logs[] = ['step' => 'diagnostics', 'message' => 'Executando diagnósticos adicionais...', 'status' => 'info'];
+        $diagnostics = runDiagnostics($projectPath);
+        
+        foreach ($diagnostics as $diag) {
+            $logs[] = $diag;
+        }
         
         return [
             'success' => false, 
-            'message' => 'Servidor iniciado mas não está respondendo na porta 5173. Tente novamente em alguns segundos.',
+            'message' => 'Servidor iniciado mas não está respondendo na porta 5173. Verifique os logs para mais detalhes.',
             'logs' => $logs,
             'attempts' => $attempts,
             'command_used' => $command,
-            'project_path' => $projectPath
+            'project_path' => $projectPath,
+            'diagnostics' => $diagnostics
         ];
         
     } catch (Exception $e) {
@@ -262,6 +281,105 @@ function startDevServer() {
             'exception' => $e->getTraceAsString()
         ];
     }
+}
+
+function cleanupPort5173() {
+    $cleaned = false;
+    
+    try {
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            // Windows: Verificar e matar processos na porta 5173
+            $netstatOutput = shell_exec('netstat -ano | findstr :5173 2>&1');
+            
+            if ($netstatOutput) {
+                $lines = explode("\n", $netstatOutput);
+                foreach ($lines as $line) {
+                    if (strpos($line, 'LISTENING') !== false) {
+                        preg_match('/\s+(\d+)$/', $line, $matches);
+                        if (isset($matches[1])) {
+                            $pid = $matches[1];
+                            shell_exec("taskkill /F /PID $pid 2>&1");
+                            $cleaned = true;
+                        }
+                    }
+                }
+            }
+        } else {
+            // Linux/Mac: Matar processo na porta 5173
+            $pids = shell_exec('lsof -ti:5173 2>&1');
+            if ($pids) {
+                $pidList = explode("\n", trim($pids));
+                foreach ($pidList as $pid) {
+                    if (is_numeric($pid)) {
+                        shell_exec("kill -9 $pid 2>&1");
+                        $cleaned = true;
+                    }
+                }
+            }
+        }
+    } catch (Exception $e) {
+        // Ignorar erros de limpeza
+    }
+    
+    return ['cleaned' => $cleaned];
+}
+
+function runDiagnostics($projectPath) {
+    $diagnostics = [];
+    
+    try {
+        // Verificar se o processo npm está rodando
+        $diagnostics[] = ['step' => 'diag_processes', 'message' => 'Verificando processos Node.js ativos...', 'status' => 'info'];
+        
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            $processes = shell_exec('tasklist /FI "IMAGENAME eq node.exe" 2>&1');
+            if (strpos($processes, 'node.exe') !== false) {
+                $diagnostics[] = ['step' => 'diag_processes', 'message' => 'Processos Node.js encontrados em execução', 'status' => 'success'];
+            } else {
+                $diagnostics[] = ['step' => 'diag_processes', 'message' => 'Nenhum processo Node.js encontrado', 'status' => 'warning'];
+            }
+        } else {
+            $processes = shell_exec('pgrep -f node 2>&1');
+            if (!empty(trim($processes))) {
+                $diagnostics[] = ['step' => 'diag_processes', 'message' => 'Processos Node.js encontrados em execução', 'status' => 'success'];
+            } else {
+                $diagnostics[] = ['step' => 'diag_processes', 'message' => 'Nenhum processo Node.js encontrado', 'status' => 'warning'];
+            }
+        }
+        
+        // Verificar se o arquivo package.json tem o script dev
+        $diagnostics[] = ['step' => 'diag_package', 'message' => 'Verificando scripts no package.json...', 'status' => 'info'];
+        $packageJson = file_get_contents($projectPath . '/package.json');
+        $package = json_decode($packageJson, true);
+        
+        if (isset($package['scripts']['dev'])) {
+            $diagnostics[] = ['step' => 'diag_package', 'message' => 'Script "dev" encontrado: ' . $package['scripts']['dev'], 'status' => 'success'];
+        } else {
+            $diagnostics[] = ['step' => 'diag_package', 'message' => 'Script "dev" não encontrado no package.json', 'status' => 'error'];
+        }
+        
+        // Verificar se o Vite está instalado
+        $diagnostics[] = ['step' => 'diag_vite', 'message' => 'Verificando instalação do Vite...', 'status' => 'info'];
+        if (file_exists($projectPath . '/node_modules/.bin/vite') || file_exists($projectPath . '/node_modules/.bin/vite.cmd')) {
+            $diagnostics[] = ['step' => 'diag_vite', 'message' => 'Vite encontrado nas dependências', 'status' => 'success'];
+        } else {
+            $diagnostics[] = ['step' => 'diag_vite', 'message' => 'Vite não encontrado - pode ser necessário reinstalar dependências', 'status' => 'warning'];
+        }
+        
+        // Tentar executar vite diretamente
+        $diagnostics[] = ['step' => 'diag_direct', 'message' => 'Tentando executar Vite diretamente...', 'status' => 'info'];
+        $viteOutput = shell_exec("cd \"$projectPath\" && npx vite --version 2>&1");
+        if (strpos($viteOutput, 'vite/') !== false || strpos($viteOutput, 'error') === false) {
+            $diagnostics[] = ['step' => 'diag_direct', 'message' => 'Vite executável: ' . trim($viteOutput), 'status' => 'success'];
+        } else {
+            $diagnostics[] = ['step' => 'diag_direct', 'message' => 'Erro ao executar Vite: ' . trim($viteOutput), 'status' => 'error'];
+        }
+        
+    } catch (Exception $e) {
+        $diagnostics[] = ['step' => 'diag_error', 'message' => 'Erro durante diagnósticos: ' . $e->getMessage(), 'status' => 'error'];
+    }
+    
+    return $diagnostics;
 }
 
 function stopDevServer() {
@@ -359,14 +477,14 @@ function stopDevServer() {
 function checkDevServerStatus() {
     try {
         // Tentar conectar na porta 5173
-        $socket = @fsockopen('localhost', 5173, $errno, $errstr, 3);
+        $socket = @fsockopen('localhost', 5173, $errno, $errstr, 5); // Aumentar timeout
         if ($socket) {
             fclose($socket);
             
             // Verificar se é realmente o Vite fazendo uma requisição HTTP
             $context = stream_context_create([
                 'http' => [
-                    'timeout' => 5,
+                    'timeout' => 10, // Aumentar timeout
                     'ignore_errors' => true,
                     'method' => 'GET',
                     'header' => 'User-Agent: Minecraft-Monitor-Launcher/1.0'
