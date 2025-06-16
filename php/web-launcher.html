@@ -13,7 +13,7 @@
             color: white;
             padding: 2rem 1rem;
         }
-        .container { max-width: 900px; margin: 0 auto; }
+        .container { max-width: 1000px; margin: 0 auto; }
         .header { text-align: center; margin-bottom: 3rem; }
         .logo { 
             width: 80px; height: 80px; 
@@ -158,7 +158,7 @@
             padding: 1rem;
             font-family: 'Courier New', monospace;
             font-size: 0.875rem;
-            max-height: 300px;
+            max-height: 400px;
             overflow-y: auto;
             margin-top: 1rem;
         }
@@ -166,26 +166,89 @@
             color: #22c55e;
             margin-bottom: 0.25rem;
             word-wrap: break-word;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+        .log-timestamp {
+            color: #6b7280;
+            font-size: 0.8rem;
+            min-width: 80px;
+        }
+        .log-step {
+            color: #3b82f6;
+            font-weight: bold;
+            min-width: 120px;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+        }
+        .log-message {
+            flex: 1;
         }
         .log-error { color: #ef4444; }
         .log-info { color: #3b82f6; }
         .log-warning { color: #f59e0b; }
+        .log-success { color: #22c55e; }
+        .detailed-logs {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+        }
+        .detailed-logs h4 {
+            color: #e2e8f0;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(148, 163, 184, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #16a34a, #22c55e);
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+        .step-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            padding: 0.5rem;
+            border-radius: 6px;
+            background: rgba(30, 41, 59, 0.5);
+        }
+        .step-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .step-pending { background: #64748b; color: white; }
+        .step-running { background: #3b82f6; color: white; animation: pulse 1s infinite; }
+        .step-success { background: #22c55e; color: white; }
+        .step-error { background: #ef4444; color: white; }
+        .step-warning { background: #f59e0b; color: white; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
         @media (max-width: 768px) {
             .controls { flex-direction: column; align-items: center; }
             .btn { width: 100%; max-width: 300px; }
             .status-card { flex-direction: column; text-align: center; gap: 1rem; }
-        }
-        .debug-info {
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid rgba(148, 163, 184, 0.1);
-            border-radius: 8px;
-            padding: 1rem;
-            margin-top: 1rem;
-            font-family: monospace;
-            font-size: 0.8rem;
-            color: #94a3b8;
-            max-height: 200px;
-            overflow-y: auto;
         }
     </style>
 </head>
@@ -234,7 +297,28 @@
                 </button>
             </div>
 
-            <!-- Logs -->
+            <!-- Progress Bar -->
+            <div id="progressContainer" style="display: none;">
+                <div class="progress-bar">
+                    <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+                </div>
+                <p id="progressText" style="text-align: center; color: #94a3b8; font-size: 0.9rem;"></p>
+            </div>
+
+            <!-- Detailed Logs -->
+            <div id="detailedLogsContainer" style="display: none;">
+                <div class="detailed-logs">
+                    <h4>
+                        📋 Logs Detalhados da Inicialização
+                        <span id="logsToggle" onclick="toggleDetailedLogs()" style="cursor: pointer; font-size: 0.8rem; color: #3b82f6;">
+                            [Minimizar]
+                        </span>
+                    </h4>
+                    <div id="detailedLogs"></div>
+                </div>
+            </div>
+
+            <!-- Simple Logs -->
             <div id="logsContainer" style="display: none;">
                 <h3 style="color: #e2e8f0; margin-bottom: 1rem;">📋 Logs do Sistema</h3>
                 <div id="logs" class="logs"></div>
@@ -277,15 +361,16 @@
             <h3 style="color: #e2e8f0; margin-bottom: 1rem;">💡 Como Usar</h3>
             <div style="color: #94a3b8; line-height: 1.6;">
                 <p><strong>1.</strong> Clique em "Iniciar Sistema" para iniciar o servidor de desenvolvimento</p>
-                <p><strong>2.</strong> Aguarde o sistema carregar (pode levar alguns segundos na primeira vez)</p>
-                <p><strong>3.</strong> Clique em "Abrir no Navegador" para acessar a interface completa</p>
-                <p><strong>4.</strong> Configure seu servidor Minecraft na aba "Settings"</p>
-                <p><strong>5.</strong> Use "Parar Sistema" quando terminar de usar</p>
+                <p><strong>2.</strong> Acompanhe o progresso detalhado nos logs em tempo real</p>
+                <p><strong>3.</strong> Aguarde o sistema carregar (pode levar alguns minutos na primeira vez)</p>
+                <p><strong>4.</strong> Clique em "Abrir no Navegador" quando estiver pronto</p>
+                <p><strong>5.</strong> Configure seu servidor Minecraft na aba "Settings"</p>
+                <p><strong>6.</strong> Use "Parar Sistema" quando terminar de usar</p>
             </div>
             
             <div style="margin-top: 1rem; padding: 1rem; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px;">
                 <p style="color: #3b82f6; font-size: 0.9rem;">
-                    <strong>💡 Primeira vez?</strong> O sistema pode demorar um pouco mais para iniciar pois precisa baixar as dependências do Node.js. Seja paciente!
+                    <strong>💡 Primeira vez?</strong> O sistema mostra exatamente o que está fazendo durante a inicialização. Na primeira execução, pode demorar mais pois precisa baixar as dependências do Node.js.
                 </p>
             </div>
         </div>
@@ -300,6 +385,8 @@
     <script>
         let statusCheckInterval;
         let lastResponse = null;
+        let detailedLogsVisible = true;
+        let currentLogs = [];
         
         // Verificar status inicial
         document.addEventListener('DOMContentLoaded', function() {
@@ -382,7 +469,9 @@
             startBtn.disabled = true;
             startBtnText.innerHTML = '<span class="loading"></span>Iniciando...';
             
-            showLogs();
+            showDetailedLogs();
+            showProgress();
+            clearDetailedLogs();
             addLog('🚀 Iniciando servidor de desenvolvimento...', 'info');
             
             try {
@@ -414,6 +503,11 @@
                     throw new Error('Resposta inválida do servidor: ' + responseText.substring(0, 200));
                 }
                 
+                // Processar logs detalhados se disponíveis
+                if (data.logs && Array.isArray(data.logs)) {
+                    processDetailedLogs(data.logs);
+                }
+                
                 if (data.success) {
                     showAlert(data.message, 'success');
                     addLog('✅ ' + data.message, 'success');
@@ -430,6 +524,7 @@
                         addLog('ℹ️ Sistema já estava rodando', 'info');
                     }
                     
+                    updateProgress(100, 'Sistema iniciado com sucesso!');
                     setTimeout(checkStatus, 2000);
                 } else {
                     showAlert(data.message, 'error');
@@ -440,17 +535,14 @@
                         addLog('💡 Baixe o Node.js em: ' + data.install_url, 'warning');
                     }
                     
-                    // Mostrar informações de debug se disponíveis
-                    if (data.node_check || data.npm_check || data.install_output) {
-                        addLog('🔍 Informações de debug disponíveis (veja console do navegador)', 'warning');
-                        console.log('Debug Info:', data);
-                    }
+                    updateProgress(0, 'Falha na inicialização');
                 }
                 
             } catch (error) {
                 const errorMsg = 'Erro ao iniciar sistema: ' + error.message;
                 showAlert(errorMsg, 'error');
                 addLog('❌ ' + errorMsg, 'error');
+                updateProgress(0, 'Erro durante inicialização');
                 console.error('Erro completo:', error);
             } finally {
                 startBtn.disabled = false;
@@ -463,6 +555,8 @@
             stopBtn.disabled = true;
             stopBtn.textContent = '⏳ Parando...';
             
+            showDetailedLogs();
+            clearDetailedLogs();
             addLog('⏹️ Parando servidor de desenvolvimento...', 'info');
             
             try {
@@ -487,6 +581,11 @@
                 } catch (jsonError) {
                     console.error('Resposta não é JSON válido:', responseText);
                     throw new Error('Resposta inválida do servidor');
+                }
+                
+                // Processar logs detalhados se disponíveis
+                if (data.logs && Array.isArray(data.logs)) {
+                    processDetailedLogs(data.logs);
                 }
                 
                 if (data.success) {
@@ -570,11 +669,112 @@
             document.getElementById('logsContainer').style.display = 'block';
         }
 
+        function showDetailedLogs() {
+            document.getElementById('detailedLogsContainer').style.display = 'block';
+            detailedLogsVisible = true;
+        }
+
+        function showProgress() {
+            document.getElementById('progressContainer').style.display = 'block';
+        }
+
+        function updateProgress(percentage, text) {
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            
+            progressFill.style.width = percentage + '%';
+            progressText.textContent = text;
+        }
+
+        function clearDetailedLogs() {
+            const detailedLogs = document.getElementById('detailedLogs');
+            detailedLogs.innerHTML = '';
+            currentLogs = [];
+        }
+
+        function processDetailedLogs(logs) {
+            const detailedLogs = document.getElementById('detailedLogs');
+            
+            logs.forEach(log => {
+                const logElement = document.createElement('div');
+                logElement.className = 'step-indicator';
+                
+                const icon = document.createElement('div');
+                icon.className = `step-icon step-${log.status}`;
+                
+                switch (log.status) {
+                    case 'success':
+                        icon.textContent = '✓';
+                        break;
+                    case 'error':
+                        icon.textContent = '✗';
+                        break;
+                    case 'warning':
+                        icon.textContent = '!';
+                        break;
+                    case 'info':
+                    default:
+                        icon.textContent = 'i';
+                        break;
+                }
+                
+                const message = document.createElement('div');
+                message.style.flex = '1';
+                message.innerHTML = `
+                    <div style="font-weight: 600; color: #e2e8f0; margin-bottom: 0.25rem;">
+                        ${log.step.replace('_', ' ').toUpperCase()}
+                    </div>
+                    <div style="color: #94a3b8; font-size: 0.9rem;">
+                        ${log.message}
+                    </div>
+                `;
+                
+                logElement.appendChild(icon);
+                logElement.appendChild(message);
+                detailedLogs.appendChild(logElement);
+            });
+            
+            // Calcular progresso baseado nos logs
+            const totalSteps = logs.length;
+            const completedSteps = logs.filter(log => log.status === 'success').length;
+            const errorSteps = logs.filter(log => log.status === 'error').length;
+            
+            if (errorSteps > 0) {
+                updateProgress(0, 'Erro durante execução');
+            } else {
+                const percentage = (completedSteps / totalSteps) * 100;
+                updateProgress(percentage, `${completedSteps}/${totalSteps} etapas concluídas`);
+            }
+            
+            // Auto-scroll para o final
+            detailedLogs.scrollTop = detailedLogs.scrollHeight;
+        }
+
+        function toggleDetailedLogs() {
+            const container = document.getElementById('detailedLogsContainer');
+            const toggle = document.getElementById('logsToggle');
+            
+            if (detailedLogsVisible) {
+                container.style.display = 'none';
+                toggle.textContent = '[Mostrar]';
+                detailedLogsVisible = false;
+            } else {
+                container.style.display = 'block';
+                toggle.textContent = '[Minimizar]';
+                detailedLogsVisible = true;
+            }
+        }
+
         function addLog(message, type = 'info') {
             const logs = document.getElementById('logs');
             const entry = document.createElement('div');
             entry.className = `log-entry log-${type}`;
-            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            entry.innerHTML = `
+                <span class="log-timestamp">[${new Date().toLocaleTimeString()}]</span>
+                <span class="log-message">${message}</span>
+            `;
+            
+            if (!logs) return;
             
             logs.appendChild(entry);
             logs.scrollTop = logs.scrollHeight;
@@ -583,6 +783,8 @@
             while (logs.children.length > 100) {
                 logs.removeChild(logs.firstChild);
             }
+            
+            showLogs();
         }
 
         // Debug: Mostrar última resposta no console
