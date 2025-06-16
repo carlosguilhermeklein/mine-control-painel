@@ -29,7 +29,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->exec("CREATE DATABASE IF NOT EXISTS `$name` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
             $pdo->exec("USE `$name`");
             
-            // Salvar configurações na sessão
+            // AGORA CRIAR TODAS AS TABELAS E CONFIGURAÇÕES
+            $sql = "
+            -- Tabela de configurações
+            CREATE TABLE IF NOT EXISTS settings (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                setting_key VARCHAR(100) UNIQUE NOT NULL,
+                setting_value TEXT NOT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            );
+
+            -- Tabela de usuários/senhas
+            CREATE TABLE IF NOT EXISTS users (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password_hash VARCHAR(255) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            -- Tabela de logs de comandos
+            CREATE TABLE IF NOT EXISTS command_history (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                command TEXT NOT NULL,
+                response TEXT,
+                success BOOLEAN DEFAULT TRUE,
+                executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            -- Tabela de logs do servidor
+            CREATE TABLE IF NOT EXISTS server_logs (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                log_level ENUM('INFO', 'WARN', 'ERROR', 'DEBUG') NOT NULL,
+                source VARCHAR(50),
+                message TEXT NOT NULL,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            ";
+            
+            // Executar criação das tabelas
+            $pdo->exec($sql);
+            
+            // Inserir configurações padrão
+            $defaultSettings = [
+                ['server_path', 'C:\\Minecraft\\Prominence II RPG\\start.bat'],
+                ['log_path', 'C:\\Minecraft\\Prominence II RPG\\logs\\latest.log'],
+                ['server_ip', '127.0.0.1'],
+                ['server_port', '25565'],
+                ['rcon_enabled', '1'],
+                ['rcon_ip', '127.0.0.1'],
+                ['rcon_port', '25575'],
+                ['rcon_password', 'minecraft'],
+                ['auto_start', '0'],
+                ['auto_restart', '1'],
+                ['max_players', '20'],
+                ['difficulty', 'normal']
+            ];
+            
+            $stmt = $pdo->prepare("INSERT IGNORE INTO settings (setting_key, setting_value) VALUES (?, ?)");
+            foreach ($defaultSettings as $setting) {
+                $stmt->execute($setting);
+            }
+            
+            // Salvar configurações na sessão para o próximo passo
             $_SESSION['install_config'] = [
                 'host' => $host,
                 'user' => $user,
@@ -37,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'name' => $name
             ];
             
-            $success = 'Conexão com banco estabelecida! Banco criado com sucesso.';
+            $success = 'Banco criado e estrutura instalada com sucesso! Agora crie o usuário administrador.';
             $step = 2;
             
         } catch (PDOException $e) {
@@ -45,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
     } elseif ($step == 2) {
-        // Criar estrutura do banco e usuário
+        // Criar usuário administrador
         $admin_user = $_POST['admin_user'] ?? 'admin';
         $admin_pass = $_POST['admin_pass'] ?? '';
         $admin_pass_confirm = $_POST['admin_pass_confirm'] ?? '';
@@ -58,68 +119,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo = new PDO("mysql:host={$config['host']};dbname={$config['name']}", $config['user'], $config['pass']);
                 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
                 
-                // Criar tabelas
-                $sql = "
-                -- Tabela de configurações
-                CREATE TABLE IF NOT EXISTS settings (
-                    id INT PRIMARY KEY AUTO_INCREMENT,
-                    setting_key VARCHAR(100) UNIQUE NOT NULL,
-                    setting_value TEXT NOT NULL,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-                );
-
-                -- Tabela de usuários/senhas
-                CREATE TABLE IF NOT EXISTS users (
-                    id INT PRIMARY KEY AUTO_INCREMENT,
-                    username VARCHAR(50) UNIQUE NOT NULL,
-                    password_hash VARCHAR(255) NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                );
-
-                -- Tabela de logs de comandos
-                CREATE TABLE IF NOT EXISTS command_history (
-                    id INT PRIMARY KEY AUTO_INCREMENT,
-                    command TEXT NOT NULL,
-                    response TEXT,
-                    success BOOLEAN DEFAULT TRUE,
-                    executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                );
-
-                -- Tabela de logs do servidor
-                CREATE TABLE IF NOT EXISTS server_logs (
-                    id INT PRIMARY KEY AUTO_INCREMENT,
-                    log_level ENUM('INFO', 'WARN', 'ERROR', 'DEBUG') NOT NULL,
-                    source VARCHAR(50),
-                    message TEXT NOT NULL,
-                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                );
-                ";
-                
-                // Executar criação das tabelas
-                $pdo->exec($sql);
-                
-                // Inserir configurações padrão
-                $defaultSettings = [
-                    ['server_path', 'C:\\Minecraft\\Prominence II RPG\\start.bat'],
-                    ['log_path', 'C:\\Minecraft\\Prominence II RPG\\logs\\latest.log'],
-                    ['server_ip', '127.0.0.1'],
-                    ['server_port', '25565'],
-                    ['rcon_enabled', '1'],
-                    ['rcon_ip', '127.0.0.1'],
-                    ['rcon_port', '25575'],
-                    ['rcon_password', 'minecraft'],
-                    ['auto_start', '0'],
-                    ['auto_restart', '1'],
-                    ['max_players', '20'],
-                    ['difficulty', 'normal']
-                ];
-                
-                $stmt = $pdo->prepare("INSERT IGNORE INTO settings (setting_key, setting_value) VALUES (?, ?)");
-                foreach ($defaultSettings as $setting) {
-                    $stmt->execute($setting);
-                }
-                
-                // Criar usuário admin
+                // Criar usuário admin (as tabelas já existem)
                 $passwordHash = password_hash($admin_pass, PASSWORD_DEFAULT);
                 $stmt = $pdo->prepare("INSERT INTO users (username, password_hash) VALUES (?, ?) ON DUPLICATE KEY UPDATE password_hash = ?");
                 $stmt->execute([$admin_user, $passwordHash, $passwordHash]);
@@ -192,11 +192,14 @@ if (\$_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
                 // Criar arquivo de lock para indicar instalação completa
                 file_put_contents('installed.lock', date('Y-m-d H:i:s'));
                 
-                $success = 'Sistema instalado com sucesso!';
+                // Limpar sessão de instalação
+                unset($_SESSION['install_config']);
+                
+                $success = 'Sistema instalado com sucesso! Usuário administrador criado.';
                 $step = 3;
                 
             } catch (PDOException $e) {
-                $error = 'Erro ao criar estrutura: ' . $e->getMessage();
+                $error = 'Erro ao criar usuário: ' . $e->getMessage();
             }
         }
     }
@@ -276,7 +279,7 @@ if (\$_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
                     <!-- Step 1: Database Configuration -->
                     <div class="mb-6">
                         <h2 class="text-2xl font-bold text-gray-900 mb-4">Configuração do Banco de Dados</h2>
-                        <p class="text-gray-600 mb-6">Configure a conexão com o MySQL do XAMPP</p>
+                        <p class="text-gray-600 mb-6">Configure a conexão com o MySQL do XAMPP. O banco e todas as tabelas serão criados automaticamente.</p>
                     </div>
 
                     <form method="POST" class="space-y-6">
@@ -308,7 +311,7 @@ if (\$_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
                         </div>
 
                         <button type="submit" class="w-full bg-minecraft-600 hover:bg-minecraft-700 text-white font-medium py-3 px-4 rounded-lg transition-colors">
-                            Testar Conexão e Continuar
+                            Criar Banco e Estrutura
                         </button>
                     </form>
 
@@ -316,7 +319,7 @@ if (\$_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
                     <!-- Step 2: Admin User Creation -->
                     <div class="mb-6">
                         <h2 class="text-2xl font-bold text-gray-900 mb-4">Criar Usuário Administrador</h2>
-                        <p class="text-gray-600 mb-6">Defina as credenciais do usuário administrador</p>
+                        <p class="text-gray-600 mb-6">O banco e tabelas foram criados com sucesso! Agora defina as credenciais do usuário administrador.</p>
                     </div>
 
                     <form method="POST" class="space-y-6">
@@ -356,14 +359,15 @@ if (\$_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
                         </div>
                         
                         <h2 class="text-2xl font-bold text-gray-900 mb-4">Instalação Concluída!</h2>
-                        <p class="text-gray-600 mb-8">O sistema foi instalado com sucesso. Agora você pode acessar o painel de controle.</p>
+                        <p class="text-gray-600 mb-8">O sistema foi instalado com sucesso. Banco criado, tabelas estruturadas e usuário administrador configurado.</p>
                         
                         <div class="bg-gray-50 rounded-lg p-6 mb-6">
                             <h3 class="font-semibold text-gray-900 mb-4">Próximos Passos:</h3>
                             <ol class="text-left text-gray-700 space-y-2">
-                                <li>1. Configure o caminho do seu servidor Minecraft nas configurações</li>
-                                <li>2. Habilite RCON no seu server.properties se desejar usar o console remoto</li>
-                                <li>3. Ajuste os caminhos dos logs para monitoramento em tempo real</li>
+                                <li>1. Execute <code class="bg-gray-200 px-2 py-1 rounded">npm run dev</code> para iniciar a interface React</li>
+                                <li>2. Acesse <code class="bg-gray-200 px-2 py-1 rounded">http://localhost:5173</code></li>
+                                <li>3. Configure o caminho do seu servidor Minecraft nas configurações</li>
+                                <li>4. Habilite RCON no seu server.properties se desejar usar o console remoto</li>
                             </ol>
                         </div>
                         
