@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, FolderOpen, Server, Key, Shield, AlertTriangle } from 'lucide-react';
+import { Save, FolderOpen, Server, Key, Shield, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { useApi, apiCall } from '../hooks/useApi';
 
 interface ServerSettings {
@@ -34,6 +34,7 @@ const Settings: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
 
   const { data: serverSettings, loading, error, refetch } = useApi<ServerSettings>('settings.php');
 
@@ -85,6 +86,7 @@ const Settings: React.FC = () => {
       return;
     }
 
+    setTesting(true);
     try {
       // Test RCON connection
       const result = await apiCall('console.php', {
@@ -102,6 +104,8 @@ const Settings: React.FC = () => {
       }
     } catch (err) {
       alert('Erro ao testar conexão RCON: ' + (err instanceof Error ? err.message : 'Erro desconhecido'));
+    } finally {
+      setTesting(false);
     }
   };
 
@@ -329,7 +333,7 @@ const Settings: React.FC = () => {
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-stone-300"
                     >
-                      {showPassword ? '🙈' : '👁️'}
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
@@ -337,10 +341,15 @@ const Settings: React.FC = () => {
                 {/* Test Connection */}
                 <button
                   onClick={handleTestConnection}
-                  className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                  disabled={testing}
+                  className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors"
                 >
-                  <Shield className="w-4 h-4" />
-                  <span>Testar Conexão RCON</span>
+                  {testing ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Shield className="w-4 h-4" />
+                  )}
+                  <span>{testing ? 'Testando...' : 'Testar Conexão RCON'}</span>
                 </button>
               </>
             )}
@@ -388,7 +397,11 @@ const Settings: React.FC = () => {
                 disabled={!hasChanges || saving}
                 className="flex items-center space-x-2 px-6 py-3 bg-minecraft-600 hover:bg-minecraft-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
               >
-                <Save className="w-4 h-4" />
+                {saving ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
                 <span>{saving ? 'Salvando...' : 'Salvar Configurações'}</span>
               </button>
             </div>

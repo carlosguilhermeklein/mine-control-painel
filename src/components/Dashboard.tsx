@@ -8,7 +8,8 @@ import {
   Server, 
   Wifi,
   WifiOff,
-  Activity
+  Activity,
+  AlertCircle
 } from 'lucide-react';
 import { useApi, apiCall } from '../hooks/useApi';
 
@@ -33,6 +34,7 @@ interface ServerStatus {
 
 const Dashboard: React.FC = () => {
   const [serverStatus, setServerStatus] = useState<'online' | 'offline' | 'starting' | 'stopping'>('offline');
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const { data: statusData, loading, error, refetch } = useApi<ServerStatus>('server.php');
   
   useEffect(() => {
@@ -44,14 +46,18 @@ const Dashboard: React.FC = () => {
   // Auto-refresh a cada 10 segundos
   useEffect(() => {
     const interval = setInterval(() => {
-      refetch();
+      if (!actionLoading) {
+        refetch();
+      }
     }, 10000);
     
     return () => clearInterval(interval);
-  }, [refetch]);
+  }, [refetch, actionLoading]);
 
   const handleServerAction = async (action: 'start' | 'stop' | 'restart') => {
     try {
+      setActionLoading(action);
+      
       if (action === 'start') {
         setServerStatus('starting');
       } else if (action === 'stop') {
@@ -77,6 +83,8 @@ const Dashboard: React.FC = () => {
     } catch (err) {
       alert('Erro ao executar ação: ' + (err instanceof Error ? err.message : 'Erro desconhecido'));
       refetch();
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -98,6 +106,16 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const getStatusText = () => {
+    switch (serverStatus) {
+      case 'online': return 'Online';
+      case 'offline': return 'Offline';
+      case 'starting': return 'Iniciando...';
+      case 'stopping': return 'Parando...';
+      default: return 'Desconhecido';
+    }
+  };
+
   if (loading && !statusData) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -109,10 +127,13 @@ const Dashboard: React.FC = () => {
   if (error) {
     return (
       <div className="bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-800 rounded-lg p-4">
-        <p className="text-red-700 dark:text-red-400">Erro ao carregar dados: {error}</p>
+        <div className="flex items-center space-x-2">
+          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+          <p className="text-red-700 dark:text-red-400">Erro ao carregar dados: {error}</p>
+        </div>
         <button 
           onClick={refetch}
-          className="mt-2 px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+          className="mt-2 px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
         >
           Tentar Novamente
         </button>
@@ -147,8 +168,8 @@ const Dashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-stone-400">Status</p>
-              <p className={`text-lg font-semibold capitalize ${getStatusColor()}`}>
-                {serverStatus}
+              <p className={`text-lg font-semibold ${getStatusColor()}`}>
+                {getStatusText()}
               </p>
             </div>
             <div className={getStatusColor()}>
@@ -205,28 +226,40 @@ const Dashboard: React.FC = () => {
         <div className="flex flex-wrap gap-3">
           <button
             onClick={() => handleServerAction('start')}
-            disabled={serverStatus === 'online' || serverStatus === 'starting'}
+            disabled={serverStatus === 'online' || serverStatus === 'starting' || actionLoading === 'start'}
             className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors duration-200"
           >
-            <Play className="w-4 h-4" />
+            {actionLoading === 'start' ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Play className="w-4 h-4" />
+            )}
             <span>Iniciar</span>
           </button>
           
           <button
             onClick={() => handleServerAction('stop')}
-            disabled={serverStatus === 'offline' || serverStatus === 'stopping'}
+            disabled={serverStatus === 'offline' || serverStatus === 'stopping' || actionLoading === 'stop'}
             className="flex items-center space-x-2 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors duration-200"
           >
-            <Square className="w-4 h-4" />
+            {actionLoading === 'stop' ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Square className="w-4 h-4" />
+            )}
             <span>Parar</span>
           </button>
           
           <button
             onClick={() => handleServerAction('restart')}
-            disabled={serverStatus === 'starting' || serverStatus === 'stopping'}
+            disabled={serverStatus === 'starting' || serverStatus === 'stopping' || actionLoading === 'restart'}
             className="flex items-center space-x-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors duration-200"
           >
-            <RotateCcw className="w-4 h-4" />
+            {actionLoading === 'restart' ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <RotateCcw className="w-4 h-4" />
+            )}
             <span>Reiniciar</span>
           </button>
         </div>
