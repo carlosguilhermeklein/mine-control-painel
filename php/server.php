@@ -173,10 +173,12 @@ function startServer() {
         
         // Executar o arquivo .bat em background
         if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-            $command = 'start /B "" "' . $serverPath . '"';
+            // Usar aspas duplas pois o cmd.exe nao reconhece aspas simples
+            $escapedPath = '"' . str_replace('"', '\"', $serverPath) . '"';
+            $command = 'start "" /B ' . $escapedPath;
             pclose(popen($command, 'r'));
         } else {
-            $command = 'nohup "' . $serverPath . '" > /dev/null 2>&1 &';
+            $command = 'nohup ' . escapeshellarg($serverPath) . ' > /dev/null 2>&1 &';
             shell_exec($command);
         }
         
