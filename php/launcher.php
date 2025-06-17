@@ -113,39 +113,43 @@ function startDevServer() {
         $logs[] = ['step' => 'init', 'message' => 'Iniciando verificações do sistema...', 'status' => 'info'];
         $logs[] = ['step' => 'init', 'message' => "Caminho do projeto: {$projectPath}", 'status' => 'info'];
         
-        // Verificar se Node.js está instalado
+        // Verificar se Node.js está instalado - VERSÃO MELHORADA PARA WINDOWS
         $logs[] = ['step' => 'node_check', 'message' => 'Verificando instalação do Node.js...', 'status' => 'info'];
         
-        $nodeResult = executeCommand('node --version');
-        if (!$nodeResult['success'] || empty($nodeResult['output'])) {
+        $nodeResult = checkNodeInstallation();
+        if (!$nodeResult['success']) {
             $logs[] = ['step' => 'node_check', 'message' => 'Node.js não encontrado no sistema', 'status' => 'error'];
+            $logs[] = ['step' => 'node_check', 'message' => 'Detalhes: ' . $nodeResult['error'], 'status' => 'error'];
             return [
                 'success' => false, 
                 'message' => 'Node.js não encontrado. Instale o Node.js primeiro.',
                 'install_url' => 'https://nodejs.org/',
                 'logs' => $logs,
+                'debug_info' => $nodeResult,
                 'manual_command' => 'Baixe e instale o Node.js de https://nodejs.org/'
             ];
         }
         
-        $nodeVersion = trim($nodeResult['output']);
+        $nodeVersion = $nodeResult['version'];
         $logs[] = ['step' => 'node_check', 'message' => "Node.js encontrado: {$nodeVersion}", 'status' => 'success'];
         
-        // Verificar se npm está disponível
+        // Verificar se npm está disponível - VERSÃO MELHORADA
         $logs[] = ['step' => 'npm_check', 'message' => 'Verificando instalação do NPM...', 'status' => 'info'];
         
-        $npmResult = executeCommand('npm --version');
-        if (!$npmResult['success'] || empty($npmResult['output'])) {
+        $npmResult = checkNpmInstallation();
+        if (!$npmResult['success']) {
             $logs[] = ['step' => 'npm_check', 'message' => 'NPM não encontrado no sistema', 'status' => 'error'];
+            $logs[] = ['step' => 'npm_check', 'message' => 'Detalhes: ' . $npmResult['error'], 'status' => 'error'];
             return [
                 'success' => false, 
                 'message' => 'NPM não encontrado. Reinstale o Node.js.',
                 'install_url' => 'https://nodejs.org/',
-                'logs' => $logs
+                'logs' => $logs,
+                'debug_info' => $npmResult
             ];
         }
         
-        $npmVersion = trim($npmResult['output']);
+        $npmVersion = $npmResult['version'];
         $logs[] = ['step' => 'npm_check', 'message' => "NPM encontrado: {$npmVersion}", 'status' => 'success'];
         
         // Verificar se package.json existe
@@ -203,6 +207,7 @@ function startDevServer() {
             
             if (!$installResult['success']) {
                 $logs[] = ['step' => 'deps_install', 'message' => 'Erro durante instalação das dependências', 'status' => 'error'];
+                $logs[] = ['step' => 'deps_install', 'message' => 'Output: ' . substr($installResult['output'], 0, 200), 'status' => 'error'];
                 return [
                     'success' => false, 
                     'message' => 'Erro ao instalar dependências.',
@@ -290,14 +295,102 @@ function startDevServer() {
     }
 }
 
-function executeCommand($command, $timeout = 30) {
+// NOVA FUNÇÃO: Verificação robusta do Node.js para Windows
+function checkNodeInstallation() {
+    $attempts = [
+        'node --version',
+        'node.exe --version',
+        '"C:\\Program Files\\nodejs\\node.exe" --version',
+        '"C:\\Program Files (x86)\\nodejs\\node.exe" --version'
+    ];
+    
+    foreach ($attempts as $command) {
+        $result = executeCommandWindows($command, 10);
+        if ($result['success'] && !empty($result['output']) && strpos($result['output'], 'v') === 0) {
+            return [
+                'success' => true,
+                'version' => trim($result['output']),
+                'command_used' => $command
+            ];
+        }
+    }
+    
+    // Tentar encontrar Node.js no PATH
+    $pathResult = executeCommandWindows('where node', 5);
+    if ($pathResult['success'] && !empty($pathResult['output'])) {
+        $nodePath = trim(explode("\n", $pathResult['output'])[0]);
+        $versionResult = executeCommandWindows("\"{$nodePath}\" --version", 5);
+        if ($versionResult['success'] && !empty($versionResult['output'])) {
+            return [
+                'success' => true,
+                'version' => trim($versionResult['output']),
+                'path' => $nodePath
+            ];
+        }
+    }
+    
+    return [
+        'success' => false,
+        'error' => 'Node.js não encontrado em nenhum local padrão',
+        'attempts' => $attempts,
+        'path_check' => $pathResult
+    ];
+}
+
+// NOVA FUNÇÃO: Verificação robusta do NPM para Windows
+function checkNpmInstallation() {
+    $attempts = [
+        'npm --version',
+        'npm.cmd --version',
+        '"C:\\Program Files\\nodejs\\npm.cmd" --version',
+        '"C:\\Program Files (x86)\\nodejs\\npm.cmd" --version'
+    ];
+    
+    foreach ($attempts as $command) {
+        $result = executeCommandWindows($command, 10);
+        if ($result['success'] && !empty($result['output']) && preg_match('/^\d+\.\d+\.\d+/', $result['output'])) {
+            return [
+                'success' => true,
+                'version' => trim($result['output']),
+                'command_used' => $command
+            ];
+        }
+    }
+    
+    // Tentar encontrar NPM no PATH
+    $pathResult = executeCommandWindows('where npm', 5);
+    if ($pathResult['success'] && !empty($pathResult['output'])) {
+        $npmPath = trim(explode("\n", $pathResult['output'])[0]);
+        $versionResult = executeCommandWindows("\"{$npmPath}\" --version", 5);
+        if ($versionResult['success'] && !empty($versionResult['output'])) {
+            return [
+                'success' => true,
+                'version' => trim($versionResult['output']),
+                'path' => $npmPath
+            ];
+        }
+    }
+    
+    return [
+        'success' => false,
+        'error' => 'NPM não encontrado em nenhum local padrão',
+        'attempts' => $attempts,
+        'path_check' => $pathResult
+    ];
+}
+
+// NOVA FUNÇÃO: Execução de comandos otimizada para Windows
+function executeCommandWindows($command, $timeout = 30) {
+    // Usar cmd.exe explicitamente para garantir compatibilidade
+    $fullCommand = "cmd /c \"{$command}\" 2>&1";
+    
     $descriptorspec = [
         0 => ["pipe", "r"],  // stdin
         1 => ["pipe", "w"],  // stdout
         2 => ["pipe", "w"]   // stderr
     ];
     
-    $process = proc_open($command, $descriptorspec, $pipes);
+    $process = proc_open($fullCommand, $descriptorspec, $pipes, null, null, ['bypass_shell' => false]);
     
     if (is_resource($process)) {
         $start = time();
@@ -341,7 +434,8 @@ function executeCommand($command, $timeout = 30) {
             'success' => $exitCode === 0,
             'output' => trim($output),
             'error' => trim($error),
-            'exit_code' => $exitCode
+            'exit_code' => $exitCode,
+            'command' => $fullCommand
         ];
     }
     
@@ -349,29 +443,57 @@ function executeCommand($command, $timeout = 30) {
         'success' => false,
         'output' => '',
         'error' => 'Falha ao criar processo',
-        'exit_code' => -1
+        'exit_code' => -1,
+        'command' => $fullCommand
     ];
+}
+
+function executeCommand($command, $timeout = 30) {
+    return executeCommandWindows($command, $timeout);
 }
 
 function executeCommandInDirectory($directory, $command, $timeout = 60) {
     $fullCommand = "cd /d \"{$directory}\" && {$command}";
-    return executeCommand($fullCommand, $timeout);
+    return executeCommandWindows($fullCommand, $timeout);
 }
 
 function startDevServerProcess($projectPath) {
     try {
-        // Windows: Usar PowerShell para melhor controle
-        $command = "powershell -Command \"Start-Process cmd -ArgumentList '/c cd /d `\"{$projectPath}`\" && npm run dev' -WindowStyle Hidden\"";
+        // Método 1: PowerShell Start-Process (mais confiável)
+        $psCommand = "powershell -Command \"Start-Process cmd -ArgumentList '/c', 'cd /d \\\"{$projectPath}\\\" && npm run dev' -WindowStyle Hidden\"";
         
-        $result = executeCommand($command, 10);
+        $result = executeCommandWindows($psCommand, 10);
         
-        if (!$result['success']) {
-            // Alternativa: usar start com cmd
-            $command = "start /B cmd /c \"cd /d \"{$projectPath}\" && npm run dev\"";
-            $output = shell_exec($command . ' 2>&1');
+        if ($result['success']) {
+            return ['success' => true, 'method' => 'powershell', 'command' => $psCommand];
         }
         
-        return ['success' => true, 'command' => $command];
+        // Método 2: CMD start (alternativa)
+        $cmdCommand = "start /B cmd /c \"cd /d \"{$projectPath}\" && npm run dev\"";
+        $result2 = executeCommandWindows($cmdCommand, 5);
+        
+        if ($result2['success']) {
+            return ['success' => true, 'method' => 'cmd', 'command' => $cmdCommand];
+        }
+        
+        // Método 3: Execução direta com popen
+        $directCommand = "cd /d \"{$projectPath}\" && npm run dev";
+        $handle = popen($directCommand, 'r');
+        
+        if ($handle) {
+            // Não fechar o handle para manter o processo rodando
+            return ['success' => true, 'method' => 'popen', 'command' => $directCommand];
+        }
+        
+        return [
+            'success' => false, 
+            'error' => 'Todos os métodos de inicialização falharam',
+            'attempts' => [
+                'powershell' => $result,
+                'cmd' => $result2,
+                'popen' => 'failed'
+            ]
+        ];
         
     } catch (Exception $e) {
         return ['success' => false, 'error' => $e->getMessage()];
@@ -383,7 +505,7 @@ function cleanupPort5173() {
     
     try {
         // Windows: Verificar e matar processos na porta 5173
-        $netstatResult = executeCommand('netstat -ano | findstr :5173');
+        $netstatResult = executeCommandWindows('netstat -ano | findstr :5173', 10);
         
         if ($netstatResult['success'] && !empty($netstatResult['output'])) {
             $lines = explode("\n", $netstatResult['output']);
@@ -392,7 +514,7 @@ function cleanupPort5173() {
                     preg_match('/\s+(\d+)$/', $line, $matches);
                     if (isset($matches[1])) {
                         $pid = $matches[1];
-                        executeCommand("taskkill /F /PID {$pid}");
+                        executeCommandWindows("taskkill /F /PID {$pid}", 5);
                         $cleaned = true;
                     }
                 }
@@ -415,7 +537,7 @@ function stopDevServer() {
         
         // Windows: Parar processos na porta 5173
         $logs[] = ['step' => 'stop_port', 'message' => 'Verificando processos na porta 5173...', 'status' => 'info'];
-        $netstatResult = executeCommand('netstat -ano | findstr :5173');
+        $netstatResult = executeCommandWindows('netstat -ano | findstr :5173', 10);
         
         if ($netstatResult['success'] && !empty($netstatResult['output'])) {
             $lines = explode("\n", $netstatResult['output']);
@@ -425,7 +547,7 @@ function stopDevServer() {
                     if (isset($matches[1])) {
                         $pid = $matches[1];
                         $logs[] = ['step' => 'stop_process', 'message' => "Finalizando processo PID: {$pid}", 'status' => 'info'];
-                        executeCommand("taskkill /F /PID {$pid}");
+                        executeCommandWindows("taskkill /F /PID {$pid}", 5);
                         $killed = true;
                     }
                 }
@@ -434,10 +556,10 @@ function stopDevServer() {
         
         // Parar processos node.exe
         $logs[] = ['step' => 'stop_node', 'message' => 'Verificando processos Node.js...', 'status' => 'info'];
-        $nodeResult = executeCommand('tasklist /FI "IMAGENAME eq node.exe"');
+        $nodeResult = executeCommandWindows('tasklist /FI "IMAGENAME eq node.exe"', 10);
         if ($nodeResult['success'] && strpos($nodeResult['output'], 'node.exe') !== false) {
             $logs[] = ['step' => 'stop_node', 'message' => 'Finalizando processos Node.js...', 'status' => 'info'];
-            executeCommand('taskkill /F /IM node.exe');
+            executeCommandWindows('taskkill /F /IM node.exe', 5);
             $killed = true;
         }
         
@@ -515,7 +637,7 @@ function openBrowser() {
         $url = 'http://localhost:5173';
         $command = "start \"\" \"{$url}\"";
         
-        $result = executeCommand($command, 5);
+        $result = executeCommandWindows($command, 5);
         
         return [
             'success' => true,
