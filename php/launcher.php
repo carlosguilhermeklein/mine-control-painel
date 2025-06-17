@@ -185,9 +185,9 @@ function startDevServer() {
             $logs[] = ['step' => 'deps_install', 'message' => 'Dependências não encontradas. Iniciando instalação...', 'status' => 'info'];
             $logs[] = ['step' => 'deps_install', 'message' => 'Executando: npm install (isso pode demorar alguns minutos)', 'status' => 'info'];
             
-            // Instalar dependências
-            $installCommand = "cd \"$projectPath\" && npm install 2>&1";
-            $installOutput = shell_exec($installCommand);
+            // Instalar dependências com timeout maior
+            $installCommand = "cd \"$projectPath\" && npm install --no-audit --no-fund 2>&1";
+            $installOutput = executeCommandWithTimeout($installCommand, 300); // 5 minutos timeout
             
             if (strpos($installOutput, 'error') !== false || strpos($installOutput, 'Error') !== false) {
                 $logs[] = ['step' => 'deps_install', 'message' => 'Erro durante instalação das dependências', 'status' => 'error'];
@@ -205,29 +205,40 @@ function startDevServer() {
             $logs[] = ['step' => 'deps_check', 'message' => 'Dependências já estão instaladas', 'status' => 'success'];
         }
         
-        // Iniciar servidor de desenvolvimento
+        // Verificar se Vite está disponível
+        $logs[] = ['step' => 'vite_check', 'message' => 'Verificando disponibilidade do Vite...', 'status' => 'info'];
+        $viteCheck = shell_exec("cd \"$projectPath\" && npx vite --version 2>&1");
+        if (strpos($viteCheck, 'vite/') !== false) {
+            $logs[] = ['step' => 'vite_check', 'message' => 'Vite disponível: ' . trim($viteCheck), 'status' => 'success'];
+        } else {
+            $logs[] = ['step' => 'vite_check', 'message' => 'Vite não encontrado, tentando instalar...', 'status' => 'warning'];
+            // Tentar instalar Vite se não estiver disponível
+            $viteInstall = shell_exec("cd \"$projectPath\" && npm install vite@latest 2>&1");
+        }
+        
+        // Iniciar servidor de desenvolvimento com método mais robusto
         $logs[] = ['step' => 'server_start', 'message' => 'Iniciando servidor de desenvolvimento...', 'status' => 'info'];
         $logs[] = ['step' => 'server_start', 'message' => 'Executando: npm run dev', 'status' => 'info'];
         
-        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-            // Windows: usar start /B para executar em background
-            $command = "cd \"$projectPath\" && start /B cmd /c \"npm run dev\" > nul 2>&1";
-            pclose(popen($command, 'r'));
-            $logs[] = ['step' => 'server_start', 'message' => 'Comando executado no Windows (background)', 'status' => 'info'];
-        } else {
-            // Linux/Mac: usar & para executar em background
-            $command = "cd \"$projectPath\" && npm run dev > /dev/null 2>&1 &";
-            shell_exec($command);
-            $logs[] = ['step' => 'server_start', 'message' => 'Comando executado no Linux/Mac (background)', 'status' => 'info'];
+        $startResult = startDevServerProcess($projectPath);
+        if (!$startResult['success']) {
+            $logs[] = ['step' => 'server_start', 'message' => 'Erro ao iniciar processo: ' . $startResult['error'], 'status' => 'error'];
+            return [
+                'success' => false,
+                'message' => 'Erro ao iniciar servidor: ' . $startResult['error'],
+                'logs' => $logs
+            ];
         }
         
+        $logs[] = ['step' => 'server_start', 'message' => 'Processo iniciado com sucesso', 'status' => 'success'];
+        
         // Aguardar um pouco para o servidor iniciar
-        $logs[] = ['step' => 'server_wait', 'message' => 'Aguardando servidor inicializar (5 segundos)...', 'status' => 'info'];
-        sleep(5); // Aumentar tempo de espera inicial
+        $logs[] = ['step' => 'server_wait', 'message' => 'Aguardando servidor inicializar (10 segundos)...', 'status' => 'info'];
+        sleep(10); // Aumentar tempo de espera inicial
         
         // Verificar se iniciou com sucesso (tentar várias vezes)
         $attempts = 0;
-        $maxAttempts = 20; // Aumentar tentativas
+        $maxAttempts = 30; // Aumentar tentativas
         
         $logs[] = ['step' => 'server_verify', 'message' => 'Verificando se servidor está respondendo...', 'status' => 'info'];
         
@@ -249,7 +260,7 @@ function startDevServer() {
             }
             
             $logs[] = ['step' => 'server_verify', 'message' => "Tentativa " . ($attempts + 1) . "/{$maxAttempts} - aguardando resposta...", 'status' => 'info'];
-            sleep(3); // Aumentar tempo entre tentativas
+            sleep(2); // Aguardar entre tentativas
             $attempts++;
         }
         
@@ -266,12 +277,12 @@ function startDevServer() {
         
         return [
             'success' => false, 
-            'message' => 'Servidor iniciado mas não está respondendo na porta 5173. Verifique os logs para mais detalhes.',
+            'message' => 'Servidor iniciado mas não está respondendo na porta 5173. Tente executar "npm run dev" manualmente.',
             'logs' => $logs,
             'attempts' => $attempts,
-            'command_used' => $command,
             'project_path' => $projectPath,
-            'diagnostics' => $diagnostics
+            'diagnostics' => $diagnostics,
+            'manual_command' => "cd \"$projectPath\" && npm run dev"
         ];
         
     } catch (Exception $e) {
@@ -283,6 +294,78 @@ function startDevServer() {
             'exception' => $e->getTraceAsString()
         ];
     }
+}
+
+function startDevServerProcess($projectPath) {
+    try {
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            // Windows: Usar PowerShell para melhor controle
+            $command = "powershell -Command \"Start-Process cmd -ArgumentList '/c cd /d `\"$projectPath`\" && npm run dev' -WindowStyle Hidden\"";
+            $output = shell_exec($command . ' 2>&1');
+            
+            // Alternativa: usar start com cmd
+            if (empty($output)) {
+                $command = "start /B cmd /c \"cd /d \"$projectPath\" && npm run dev\"";
+                pclose(popen($command, 'r'));
+            }
+            
+            return ['success' => true, 'command' => $command];
+        } else {
+            // Linux/Mac: usar nohup para processo em background
+            $command = "cd \"$projectPath\" && nohup npm run dev > /dev/null 2>&1 &";
+            shell_exec($command);
+            
+            return ['success' => true, 'command' => $command];
+        }
+    } catch (Exception $e) {
+        return ['success' => false, 'error' => $e->getMessage()];
+    }
+}
+
+function executeCommandWithTimeout($command, $timeout = 60) {
+    $descriptorspec = [
+        0 => ["pipe", "r"],  // stdin
+        1 => ["pipe", "w"],  // stdout
+        2 => ["pipe", "w"]   // stderr
+    ];
+    
+    $process = proc_open($command, $descriptorspec, $pipes);
+    
+    if (is_resource($process)) {
+        $start = time();
+        $output = '';
+        
+        // Fechar stdin
+        fclose($pipes[0]);
+        
+        // Ler output com timeout
+        while (time() - $start < $timeout) {
+            $status = proc_get_status($process);
+            if (!$status['running']) {
+                break;
+            }
+            
+            $read = [$pipes[1]];
+            $write = null;
+            $except = null;
+            
+            if (stream_select($read, $write, $except, 1)) {
+                $output .= fread($pipes[1], 8192);
+            }
+        }
+        
+        // Ler qualquer output restante
+        $output .= stream_get_contents($pipes[1]);
+        $output .= stream_get_contents($pipes[2]);
+        
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        proc_close($process);
+        
+        return $output;
+    }
+    
+    return shell_exec($command);
 }
 
 function cleanupPort5173() {
@@ -375,6 +458,14 @@ function runDiagnostics($projectPath) {
             $diagnostics[] = ['step' => 'diag_direct', 'message' => 'Vite executável: ' . trim($viteOutput), 'status' => 'success'];
         } else {
             $diagnostics[] = ['step' => 'diag_direct', 'message' => 'Erro ao executar Vite: ' . trim($viteOutput), 'status' => 'error'];
+        }
+        
+        // Verificar permissões
+        $diagnostics[] = ['step' => 'diag_permissions', 'message' => 'Verificando permissões do projeto...', 'status' => 'info'];
+        if (is_writable($projectPath)) {
+            $diagnostics[] = ['step' => 'diag_permissions', 'message' => 'Permissões de escrita OK', 'status' => 'success'];
+        } else {
+            $diagnostics[] = ['step' => 'diag_permissions', 'message' => 'Sem permissões de escrita no projeto', 'status' => 'warning'];
         }
         
     } catch (Exception $e) {

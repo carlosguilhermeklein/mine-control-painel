@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, FolderOpen, Server, Key, Shield, AlertTriangle, Eye, EyeOff } from 'lucide-react';
+import { Save, FolderOpen, Server, Key, Shield, AlertTriangle, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import { useApi, apiCall } from '../hooks/useApi';
 
 interface ServerSettings {
@@ -109,6 +109,89 @@ const Settings: React.FC = () => {
     }
   };
 
+  const handleFileSelect = (inputId: string, settingKey: keyof ServerSettings) => {
+    // Create a hidden file input
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.style.display = 'none';
+    
+    // Set appropriate file filters based on the setting
+    if (settingKey === 'server_path') {
+      fileInput.accept = '.bat,.sh,.exe';
+    } else if (settingKey === 'log_path') {
+      fileInput.accept = '.log,.txt';
+    }
+    
+    fileInput.onchange = (e) => {
+      const target = e.target as HTMLInputElement;
+      if (target.files && target.files[0]) {
+        const file = target.files[0];
+        const filePath = file.webkitRelativePath || file.name;
+        
+        // For demonstration, we'll use the file name
+        // In a real implementation, you'd need to handle the full path
+        handleSettingChange(settingKey, filePath);
+        
+        // Show a helpful message
+        alert(`Arquivo selecionado: ${file.name}\n\nNota: Em um ambiente de produção, você precisaria configurar o caminho completo manualmente.`);
+      }
+      
+      // Clean up
+      document.body.removeChild(fileInput);
+    };
+    
+    // Add to DOM and trigger click
+    document.body.appendChild(fileInput);
+    fileInput.click();
+  };
+
+  const handleFolderSelect = (settingKey: keyof ServerSettings) => {
+    // Create a hidden file input with directory selection
+    const folderInput = document.createElement('input');
+    folderInput.type = 'file';
+    folderInput.style.display = 'none';
+    folderInput.setAttribute('webkitdirectory', '');
+    folderInput.setAttribute('directory', '');
+    
+    folderInput.onchange = (e) => {
+      const target = e.target as HTMLInputElement;
+      if (target.files && target.files[0]) {
+        const file = target.files[0];
+        const folderPath = file.webkitRelativePath.split('/')[0];
+        
+        // For demonstration, we'll use the folder name
+        handleSettingChange(settingKey, folderPath);
+        
+        // Show a helpful message
+        alert(`Pasta selecionada: ${folderPath}\n\nNota: Configure o caminho completo manualmente nas configurações.`);
+      }
+      
+      // Clean up
+      document.body.removeChild(folderInput);
+    };
+    
+    // Add to DOM and trigger click
+    document.body.appendChild(folderInput);
+    folderInput.click();
+  };
+
+  const getCommonPaths = () => {
+    return {
+      serverPaths: [
+        'C:\\Minecraft\\Prominence II RPG\\start.bat',
+        'C:\\Users\\%USERNAME%\\Desktop\\Minecraft\\start.bat',
+        'D:\\Games\\Minecraft\\Prominence II RPG\\start.bat',
+        'C:\\Games\\Minecraft Server\\start.bat'
+      ],
+      logPaths: [
+        'C:\\Minecraft\\Prominence II RPG\\logs\\latest.log',
+        'C:\\Users\\%USERNAME%\\Desktop\\Minecraft\\logs\\latest.log',
+        'D:\\Games\\Minecraft\\Prominence II RPG\\logs\\latest.log',
+        'C:\\Games\\Minecraft Server\\logs\\latest.log'
+      ]
+    };
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -130,6 +213,8 @@ const Settings: React.FC = () => {
       </div>
     );
   }
+
+  const commonPaths = getCommonPaths();
 
   return (
     <div className="space-y-6">
@@ -186,17 +271,40 @@ const Settings: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 dark:text-stone-300 mb-2">
                 Caminho do Arquivo .bat
               </label>
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  value={settings.server_path}
-                  onChange={(e) => handleSettingChange('server_path', e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-stone-600 rounded-lg focus:ring-2 focus:ring-minecraft-500 focus:border-minecraft-500 dark:bg-stone-700 dark:text-white"
-                  placeholder="C:\Minecraft\Prominence II RPG\start.bat"
-                />
-                <button className="flex items-center space-x-1 px-3 py-2 bg-gray-100 dark:bg-stone-700 hover:bg-gray-200 dark:hover:bg-stone-600 rounded-lg transition-colors">
-                  <FolderOpen className="w-4 h-4" />
-                </button>
+              <div className="space-y-2">
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={settings.server_path}
+                    onChange={(e) => handleSettingChange('server_path', e.target.value)}
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-stone-600 rounded-lg focus:ring-2 focus:ring-minecraft-500 focus:border-minecraft-500 dark:bg-stone-700 dark:text-white"
+                    placeholder="C:\Minecraft\Prominence II RPG\start.bat"
+                  />
+                  <button 
+                    onClick={() => handleFileSelect('server_path', 'server_path')}
+                    className="flex items-center space-x-1 px-3 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 rounded-lg transition-colors"
+                    title="Selecionar arquivo .bat"
+                  >
+                    <FolderOpen className="w-4 h-4" />
+                    <span className="hidden sm:inline">Procurar</span>
+                  </button>
+                </div>
+                
+                {/* Quick Select for Common Paths */}
+                <div className="text-xs text-gray-600 dark:text-stone-400">
+                  <span className="font-medium">Caminhos comuns:</span>
+                  <div className="mt-1 space-y-1">
+                    {commonPaths.serverPaths.map((path, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleSettingChange('server_path', path)}
+                        className="block w-full text-left px-2 py-1 hover:bg-gray-100 dark:hover:bg-stone-700 rounded text-xs font-mono"
+                      >
+                        {path}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -218,17 +326,40 @@ const Settings: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 dark:text-stone-300 mb-2">
                 Caminho do Arquivo de Log
               </label>
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  value={settings.log_path}
-                  onChange={(e) => handleSettingChange('log_path', e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-stone-600 rounded-lg focus:ring-2 focus:ring-minecraft-500 focus:border-minecraft-500 dark:bg-stone-700 dark:text-white"
-                  placeholder="C:\Minecraft\Prominence II RPG\logs\latest.log"
-                />
-                <button className="flex items-center space-x-1 px-3 py-2 bg-gray-100 dark:bg-stone-700 hover:bg-gray-200 dark:hover:bg-stone-600 rounded-lg transition-colors">
-                  <FolderOpen className="w-4 h-4" />
-                </button>
+              <div className="space-y-2">
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={settings.log_path}
+                    onChange={(e) => handleSettingChange('log_path', e.target.value)}
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-stone-600 rounded-lg focus:ring-2 focus:ring-minecraft-500 focus:border-minecraft-500 dark:bg-stone-700 dark:text-white"
+                    placeholder="C:\Minecraft\Prominence II RPG\logs\latest.log"
+                  />
+                  <button 
+                    onClick={() => handleFileSelect('log_path', 'log_path')}
+                    className="flex items-center space-x-1 px-3 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 rounded-lg transition-colors"
+                    title="Selecionar arquivo de log"
+                  >
+                    <FolderOpen className="w-4 h-4" />
+                    <span className="hidden sm:inline">Procurar</span>
+                  </button>
+                </div>
+                
+                {/* Quick Select for Common Log Paths */}
+                <div className="text-xs text-gray-600 dark:text-stone-400">
+                  <span className="font-medium">Caminhos comuns:</span>
+                  <div className="mt-1 space-y-1">
+                    {commonPaths.logPaths.map((path, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleSettingChange('log_path', path)}
+                        className="block w-full text-left px-2 py-1 hover:bg-gray-100 dark:hover:bg-stone-700 rounded text-xs font-mono"
+                      >
+                        {path}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -404,6 +535,24 @@ const Settings: React.FC = () => {
                 )}
                 <span>{saving ? 'Salvando...' : 'Salvar Configurações'}</span>
               </button>
+            </div>
+          </div>
+        </div>
+
+        {/* File Selection Help */}
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6 lg:col-span-2">
+          <div className="flex items-start space-x-3">
+            <CheckCircle className="w-6 h-6 text-blue-600 dark:text-blue-400 mt-0.5" />
+            <div>
+              <h4 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                💡 Dicas para Configuração de Arquivos
+              </h4>
+              <div className="text-blue-800 dark:text-blue-200 space-y-2 text-sm">
+                <p><strong>Seletor de Arquivos:</strong> Use os botões "Procurar" para selecionar arquivos facilmente, ou clique nos caminhos sugeridos.</p>
+                <p><strong>Arquivo .bat:</strong> Procure por "start.bat", "run.bat" ou similar na pasta do seu servidor Minecraft.</p>
+                <p><strong>Arquivo de Log:</strong> Geralmente está em "logs/latest.log" dentro da pasta do servidor.</p>
+                <p><strong>Caminhos Manuais:</strong> Você também pode digitar o caminho completo diretamente nos campos.</p>
+              </div>
             </div>
           </div>
         </div>
