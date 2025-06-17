@@ -95,9 +95,10 @@ try {
 ob_end_flush();
 
 function startDevServer() {
+    $logs = [];
+    
     try {
         $projectPath = dirname(dirname(__FILE__));
-        $logs = [];
         
         $logs[] = ['step' => 'init', 'message' => 'Iniciando verificações do sistema...', 'status' => 'info'];
         
@@ -169,6 +170,15 @@ function startDevServer() {
         
         $logs[] = ['step' => 'status_check', 'message' => 'Porta 5173 está livre para uso', 'status' => 'success'];
         
+        // Verificar se há processos antigos na porta 5173
+        $logs[] = ['step' => 'port_cleanup', 'message' => 'Verificando processos antigos na porta 5173...', 'status' => 'info'];
+        $cleanupResult = cleanupPort5173();
+        if ($cleanupResult['cleaned']) {
+            $logs[] = ['step' => 'port_cleanup', 'message' => 'Processos antigos removidos da porta 5173', 'status' => 'success'];
+        } else {
+            $logs[] = ['step' => 'port_cleanup', 'message' => 'Porta 5173 está limpa', 'status' => 'success'];
+        }
+        
         // Verificar se node_modules existe, se não, instalar dependências
         $logs[] = ['step' => 'deps_check', 'message' => 'Verificando dependências do projeto...', 'status' => 'info'];
         if (!is_dir($projectPath . '/node_modules')) {
@@ -193,15 +203,6 @@ function startDevServer() {
             $logs[] = ['step' => 'deps_install', 'message' => 'Dependências instaladas com sucesso!', 'status' => 'success'];
         } else {
             $logs[] = ['step' => 'deps_check', 'message' => 'Dependências já estão instaladas', 'status' => 'success'];
-        }
-        
-        // Verificar se há processos antigos na porta 5173
-        $logs[] = ['step' => 'port_cleanup', 'message' => 'Verificando processos antigos na porta 5173...', 'status' => 'info'];
-        $cleanupResult = cleanupPort5173();
-        if ($cleanupResult['cleaned']) {
-            $logs[] = ['step' => 'port_cleanup', 'message' => 'Processos antigos removidos da porta 5173', 'status' => 'success'];
-        } else {
-            $logs[] = ['step' => 'port_cleanup', 'message' => 'Porta 5173 está limpa', 'status' => 'success'];
         }
         
         // Iniciar servidor de desenvolvimento
@@ -274,10 +275,11 @@ function startDevServer() {
         ];
         
     } catch (Exception $e) {
+        $logs[] = ['step' => 'error', 'message' => 'Erro durante execução: ' . $e->getMessage(), 'status' => 'error'];
         return [
             'success' => false, 
             'message' => 'Erro ao iniciar servidor: ' . $e->getMessage(),
-            'logs' => $logs ?? [],
+            'logs' => $logs,
             'exception' => $e->getTraceAsString()
         ];
     }
@@ -383,10 +385,11 @@ function runDiagnostics($projectPath) {
 }
 
 function stopDevServer() {
+    $logs = [];
+    
     try {
         $killed = false;
         $output = [];
-        $logs = [];
         
         $logs[] = ['step' => 'stop_init', 'message' => 'Iniciando processo de parada do servidor...', 'status' => 'info'];
         
@@ -466,10 +469,11 @@ function stopDevServer() {
         }
         
     } catch (Exception $e) {
+        $logs[] = ['step' => 'stop_error', 'message' => 'Erro durante parada: ' . $e->getMessage(), 'status' => 'error'];
         return [
             'success' => false, 
             'message' => 'Erro ao parar servidor: ' . $e->getMessage(),
-            'logs' => $logs ?? []
+            'logs' => $logs
         ];
     }
 }
