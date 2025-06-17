@@ -26,92 +26,6 @@
         }
         h1 { font-size: 2.5rem; margin-bottom: 0.5rem; background: linear-gradient(135deg, #22c55e, #16a34a); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .subtitle { color: #94a3b8; font-size: 1.1rem; }
-        .progress { margin-bottom: 2rem; }
-        .progress-bar { 
-            width: 100%; height: 8px; 
-            background: #e5e7eb; border-radius: 4px; 
-            overflow: hidden;
-        }
-        .progress-fill { 
-            height: 100%; background: #16a34a; 
-            transition: width 0.3s ease;
-        }
-        .progress-text { 
-            display: flex; justify-content: space-between; 
-            margin-bottom: 0.5rem; font-size: 0.875rem; 
-            color: #16a34a; font-weight: 600;
-        }
-        .alert { 
-            padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;
-            display: flex; align-items: center;
-        }
-        .alert-error { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; }
-        .alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #16a34a; }
-        .form-group { margin-bottom: 1.5rem; }
-        .form-label { 
-            display: block; margin-bottom: 0.5rem; 
-            font-weight: 600; color: #374151;
-        }
-        .form-input { 
-            width: 100%; padding: 0.75rem; 
-            border: 1px solid #d1d5db; border-radius: 8px;
-            font-size: 1rem; transition: border-color 0.2s;
-        }
-        .form-input:focus { 
-            outline: none; border-color: #16a34a; 
-            box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
-        }
-        .form-help { font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem; }
-        .btn { 
-            display: inline-block; padding: 0.75rem 1.5rem;
-            background: #16a34a; color: white; text-decoration: none;
-            border-radius: 8px; font-weight: 600; text-align: center;
-            border: none; cursor: pointer; font-size: 1rem;
-            transition: background-color 0.2s;
-        }
-        .btn:hover { background: #15803d; }
-        .btn:disabled { background: #9ca3af; cursor: not-allowed; }
-        .btn-block { width: 100%; }
-        .check-list { margin-bottom: 1.5rem; }
-        .check-item { 
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 0.75rem; background: #f9fafb; border-radius: 8px;
-            margin-bottom: 0.5rem;
-        }
-        .check-status { font-weight: 600; }
-        .check-ok { color: #16a34a; }
-        .check-fail { color: #dc2626; }
-        .steps { margin-bottom: 2rem; }
-        .step { 
-            display: flex; align-items: flex-start; margin-bottom: 1rem;
-            padding: 1rem; background: #f9fafb; border-radius: 8px;
-        }
-        .step-number { 
-            width: 32px; height: 32px; background: #16a34a; color: white;
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            font-weight: bold; margin-right: 1rem; flex-shrink: 0;
-        }
-        .step-content strong { display: block; margin-bottom: 0.25rem; }
-        .code { 
-            background: #f3f4f6; padding: 0.25rem 0.5rem; 
-            border-radius: 4px; font-family: monospace; font-size: 0.875rem;
-        }
-        .info-box { 
-            background: #eff6ff; border: 1px solid #bfdbfe; 
-            border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;
-        }
-        .info-title { font-weight: 600; color: #1e40af; margin-bottom: 0.5rem; }
-        .info-list { color: #1e40af; font-size: 0.875rem; }
-        .info-list li { margin-bottom: 0.25rem; }
-        .flex { display: flex; gap: 1rem; }
-        .flex > * { flex: 1; }
-        .text-center { text-align: center; }
-        .success-icon { 
-            width: 64px; height: 64px; background: #dcfce7; 
-            border-radius: 50%; margin: 0 auto 1rem;
-            display: flex; align-items: center; justify-content: center;
-            color: #16a34a; font-size: 24px;
-        }
         .card { 
             background: rgba(30, 41, 59, 0.8); 
             border: 1px solid rgba(148, 163, 184, 0.2);
@@ -446,7 +360,7 @@
         <div class="header">
             <div class="logo">🛡️</div>
             <h1>Minecraft Server Monitor</h1>
-            <p class="subtitle">Launcher Web - Sistema Inteligente de Inicialização</p>
+            <p class="subtitle">Launcher Web - Sistema Simplificado para Windows/XAMPP</p>
         </div>
 
         <!-- Status Card -->
@@ -513,12 +427,12 @@
                         🔧 Solução de Problemas
                     </h4>
                     <ul>
-                        <li>Verifique se o Node.js está instalado corretamente</li>
-                        <li>Tente executar "npm install" manualmente na pasta do projeto</li>
-                        <li>Verifique se não há antivírus bloqueando o Node.js</li>
-                        <li>Certifique-se de que a porta 5173 não está sendo usada por outro programa</li>
-                        <li>Tente reiniciar o computador e executar novamente</li>
-                        <li>Se o problema persistir, execute "npm run dev" manualmente no terminal</li>
+                        <li>Verifique se o Node.js está instalado: <code>node --version</code></li>
+                        <li>Verifique se o NPM está funcionando: <code>npm --version</code></li>
+                        <li>Execute manualmente: <code>cd C:\xampp\htdocs\minecraft-monitor && npm install && npm run dev</code></li>
+                        <li>Verifique se a porta 5173 não está sendo usada por outro programa</li>
+                        <li>Tente reiniciar o XAMPP e o computador</li>
+                        <li>Se o problema persistir, acesse http://localhost:5173 diretamente</li>
                     </ul>
                 </div>
             </div>
@@ -565,17 +479,18 @@
         <div class="card">
             <h3 style="color: #e2e8f0; margin-bottom: 1rem;">💡 Como Usar</h3>
             <div style="color: #94a3b8; line-height: 1.6;">
-                <p><strong>1.</strong> Clique em "Iniciar Sistema" para iniciar o servidor de desenvolvimento</p>
-                <p><strong>2.</strong> Acompanhe o progresso visual e os logs detalhados em tempo real</p>
-                <p><strong>3.</strong> Aguarde o sistema carregar (pode levar alguns minutos na primeira vez)</p>
-                <p><strong>4.</strong> Clique em "Abrir no Navegador" quando estiver pronto</p>
-                <p><strong>5.</strong> Configure seu servidor Minecraft na aba "Settings"</p>
-                <p><strong>6.</strong> Use "Parar Sistema" quando terminar de usar</p>
+                <p><strong>1.</strong> Certifique-se que o Node.js está instalado (baixe em https://nodejs.org/)</p>
+                <p><strong>2.</strong> Clique em "Iniciar Sistema" para iniciar o servidor de desenvolvimento</p>
+                <p><strong>3.</strong> Acompanhe o progresso visual e os logs detalhados em tempo real</p>
+                <p><strong>4.</strong> Aguarde o sistema carregar (pode levar alguns minutos na primeira vez)</p>
+                <p><strong>5.</strong> Clique em "Abrir no Navegador" quando estiver pronto</p>
+                <p><strong>6.</strong> Configure seu servidor Minecraft na aba "Settings"</p>
+                <p><strong>7.</strong> Use "Parar Sistema" quando terminar de usar</p>
             </div>
             
             <div style="margin-top: 1rem; padding: 1rem; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px;">
                 <p style="color: #3b82f6; font-size: 0.9rem;">
-                    <strong>💡 Sistema Inteligente:</strong> O launcher mostra exatamente o que está acontecendo em cada etapa, com progresso visual e diagnósticos automáticos. Na primeira execução, pode demorar mais pois precisa baixar as dependências do Node.js.
+                    <strong>💡 Versão Simplificada:</strong> Esta versão foi otimizada para funcionar no Windows com XAMPP. Se ainda houver problemas, execute os comandos manualmente no terminal.
                 </p>
             </div>
         </div>
@@ -583,7 +498,7 @@
         <!-- Footer -->
         <div style="text-align: center; color: #64748b; font-size: 0.875rem; margin-top: 2rem;">
             Minecraft Server Monitor - Prominence II RPG Edition<br>
-            <span style="font-size: 0.75rem;">Sistema completo de monitoramento - Tudo pelo navegador!</span>
+            <span style="font-size: 0.75rem;">Sistema simplificado para Windows/XAMPP</span>
         </div>
     </div>
 
@@ -600,7 +515,6 @@
             { id: 'npm_check', title: 'NPM', description: 'Verificando gerenciador de pacotes' },
             { id: 'project_check', title: 'Projeto', description: 'Validando estrutura do projeto' },
             { id: 'status_check', title: 'Status', description: 'Verificando se já está rodando' },
-            { id: 'port_cleanup', title: 'Limpeza', description: 'Limpando porta 5173' },
             { id: 'deps_check', title: 'Dependências', description: 'Verificando node_modules' },
             { id: 'deps_install', title: 'Instalação', description: 'Instalando dependências (se necessário)' },
             { id: 'server_start', title: 'Servidor', description: 'Iniciando servidor de desenvolvimento' },
@@ -612,8 +526,8 @@
         // Verificar status inicial
         document.addEventListener('DOMContentLoaded', function() {
             checkStatus();
-            // Verificar status a cada 5 segundos
-            statusCheckInterval = setInterval(checkStatus, 5000);
+            // Verificar status a cada 10 segundos
+            statusCheckInterval = setInterval(checkStatus, 10000);
         });
 
         async function checkStatus() {
@@ -642,7 +556,7 @@
                     data = JSON.parse(responseText);
                 } catch (jsonError) {
                     console.error('Resposta não é JSON válido:', responseText);
-                    throw new Error('Resposta inválida do servidor: ' + responseText.substring(0, 100));
+                    throw new Error('Resposta inválida do servidor');
                 }
                 
                 lastResponse = data;
@@ -727,7 +641,7 @@
                     data = JSON.parse(responseText);
                 } catch (jsonError) {
                     console.error('Resposta não é JSON válido:', responseText);
-                    throw new Error('Resposta inválida do servidor: ' + responseText.substring(0, 200));
+                    throw new Error('Resposta inválida do servidor');
                 }
                 
                 // Processar logs detalhados se disponíveis
@@ -741,10 +655,6 @@
                     
                     if (data.url) {
                         addLog('🌐 Sistema disponível em: ' + data.url, 'info');
-                    }
-                    
-                    if (data.node_version) {
-                        addLog(`📦 Node.js: ${data.node_version}, NPM: ${data.npm_version}`, 'info');
                     }
                     
                     if (data.already_running) {
@@ -761,6 +671,10 @@
                     if (data.install_url) {
                         showAlert(`<a href="${data.install_url}" target="_blank" style="color: #3b82f6; text-decoration: underline;">Clique aqui para baixar o Node.js</a>`, 'info');
                         addLog('💡 Baixe o Node.js em: ' + data.install_url, 'warning');
+                    }
+                    
+                    if (data.manual_url) {
+                        showAlert(`Tente acessar <a href="${data.manual_url}" target="_blank" style="color: #3b82f6; text-decoration: underline;">${data.manual_url}</a> diretamente`, 'info');
                     }
                     
                     updateProgress(0, 'Falha na inicialização');
