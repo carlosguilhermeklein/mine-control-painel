@@ -7,6 +7,9 @@ error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 
+// Iniciar buffer de saída para capturar qualquer output indesejado
+ob_start();
+
 // Headers primeiro para evitar problemas
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
@@ -15,6 +18,7 @@ header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
 // Responder OPTIONS imediatamente
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+    ob_clean();
     http_response_code(200);
     echo json_encode(['status' => 'ok']);
     exit;
@@ -22,17 +26,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 
 // Função para resposta de erro padronizada
 function sendError($message, $code = 500, $details = []) {
+    ob_clean(); // Limpar qualquer output anterior
     http_response_code($code);
     echo json_encode([
         'error' => $message,
         'details' => $details,
-        'timestamp' => date('Y-m-d H:i:s')
+        'timestamp' => date('Y-m-d H:i:s'),
+        'php_version' => PHP_VERSION,
+        'server_software' => $_SERVER['SERVER_SOFTWARE'] ?? 'Unknown'
     ]);
     exit;
 }
 
 // Função para resposta de sucesso padronizada
 function sendSuccess($data) {
+    ob_clean(); // Limpar qualquer output anterior
     http_response_code(200);
     echo json_encode($data);
     exit;
@@ -46,13 +54,26 @@ try {
 
     // Processar requisições
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $input = json_decode(file_get_contents('php://input'), true);
+        $rawInput = file_get_contents('php://input');
+        
+        if (empty($rawInput)) {
+            sendError('Dados de entrada vazios', 400, ['raw_input' => $rawInput]);
+        }
+        
+        $input = json_decode($rawInput, true);
         
         if (json_last_error() !== JSON_ERROR_NONE) {
-            sendError('JSON inválido: ' . json_last_error_msg(), 400);
+            sendError('JSON inválido: ' . json_last_error_msg(), 400, [
+                'raw_input' => substr($rawInput, 0, 200),
+                'json_error' => json_last_error()
+            ]);
         }
         
         $action = $input['action'] ?? '';
+        
+        if (empty($action)) {
+            sendError('Ação não especificada', 400, ['input' => $input]);
+        }
         
         switch ($action) {
             case 'start_dev_server':
@@ -76,21 +97,24 @@ try {
                 break;
                 
             default:
-                sendError('Ação inválida: ' . $action, 400);
+                sendError('Ação inválida: ' . $action, 400, ['available_actions' => [
+                    'start_dev_server', 'stop_dev_server', 'check_dev_status', 'open_browser'
+                ]]);
         }
         
     } elseif ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $status = checkDevServerStatus();
         sendSuccess($status);
     } else {
-        sendError('Método não permitido', 405);
+        sendError('Método não permitido: ' . $_SERVER['REQUEST_METHOD'], 405);
     }
 
 } catch (Exception $e) {
     sendError('Erro interno do servidor', 500, [
         'message' => $e->getMessage(),
         'file' => basename($e->getFile()),
-        'line' => $e->getLine()
+        'line' => $e->getLine(),
+        'trace' => array_slice($e->getTrace(), 0, 3) // Apenas primeiras 3 linhas do trace
     ]);
 } catch (Error $e) {
     sendError('Erro fatal do PHP', 500, [
@@ -104,14 +128,28 @@ function startDevServer() {
     $logs = [];
     
     try {
+        $logs[] = ['step' => 'init', 'message' => 'Iniciando verificações do sistema...', 'status' => 'info'];
+        
         // Determinar caminho do projeto de forma mais robusta
         $projectPath = realpath(dirname(dirname(__FILE__)));
         if (!$projectPath) {
             $projectPath = dirname(dirname(__FILE__));
         }
         
-        $logs[] = ['step' => 'init', 'message' => 'Iniciando verificações do sistema...', 'status' => 'info'];
+        // Normalizar separadores de diretório para Windows
+        $projectPath = str_replace('/', DIRECTORY_SEPARATOR, $projectPath);
+        
         $logs[] = ['step' => 'init', 'message' => "Caminho do projeto: {$projectPath}", 'status' => 'info'];
+        
+        // Verificar se o diretório existe
+        if (!is_dir($projectPath)) {
+            $logs[] = ['step' => 'init', 'message' => 'Diretório do projeto não encontrado', 'status' => 'error'];
+            return [
+                'success' => false,
+                'message' => 'Diretório do projeto não encontrado: ' . $projectPath,
+                'logs' => $logs
+            ];
+        }
         
         // Verificar se Node.js está instalado - VERSÃO MELHORADA PARA WINDOWS
         $logs[] = ['step' => 'node_check', 'message' => 'Verificando instalação do Node.js...', 'status' => 'info'];
@@ -158,12 +196,18 @@ function startDevServer() {
         
         if (!file_exists($packageJsonPath)) {
             $logs[] = ['step' => 'project_check', 'message' => 'Arquivo package.json não encontrado', 'status' => 'error'];
+            
+            // Listar arquivos no diretório para debug
+            $files = is_dir($projectPath) ? scandir($projectPath) : [];
+            $logs[] = ['step' => 'project_check', 'message' => 'Arquivos encontrados: ' . implode(', ', array_slice($files, 0, 10)), 'status' => 'info'];
+            
             return [
                 'success' => false, 
                 'message' => 'Arquivo package.json não encontrado no projeto.',
                 'logs' => $logs,
                 'project_path' => $projectPath,
-                'expected_file' => $packageJsonPath
+                'expected_file' => $packageJsonPath,
+                'files_found' => $files
             ];
         }
         
@@ -232,7 +276,8 @@ function startDevServer() {
                 'success' => false,
                 'message' => 'Erro ao iniciar servidor: ' . $startResult['error'],
                 'logs' => $logs,
-                'manual_command' => "cd \"{$projectPath}\" && npm run dev"
+                'manual_command' => "cd \"{$projectPath}\" && npm run dev",
+                'start_details' => $startResult
             ];
         }
         
@@ -290,7 +335,11 @@ function startDevServer() {
         return [
             'success' => false, 
             'message' => 'Erro ao iniciar servidor: ' . $e->getMessage(),
-            'logs' => $logs
+            'logs' => $logs,
+            'exception_details' => [
+                'file' => basename($e->getFile()),
+                'line' => $e->getLine()
+            ]
         ];
     }
 }
@@ -306,7 +355,7 @@ function checkNodeInstallation() {
     
     foreach ($attempts as $command) {
         $result = executeCommandWindows($command, 10);
-        if ($result['success'] && !empty($result['output']) && strpos($result['output'], 'v') === 0) {
+        if ($result['success'] && !empty($result['output']) && preg_match('/^v\d+\.\d+\.\d+/', trim($result['output']))) {
             return [
                 'success' => true,
                 'version' => trim($result['output']),
@@ -333,7 +382,7 @@ function checkNodeInstallation() {
         'success' => false,
         'error' => 'Node.js não encontrado em nenhum local padrão',
         'attempts' => $attempts,
-        'path_check' => $pathResult
+        'path_check' => $pathResult ?? null
     ];
 }
 
@@ -348,7 +397,7 @@ function checkNpmInstallation() {
     
     foreach ($attempts as $command) {
         $result = executeCommandWindows($command, 10);
-        if ($result['success'] && !empty($result['output']) && preg_match('/^\d+\.\d+\.\d+/', $result['output'])) {
+        if ($result['success'] && !empty($result['output']) && preg_match('/^\d+\.\d+\.\d+/', trim($result['output']))) {
             return [
                 'success' => true,
                 'version' => trim($result['output']),
@@ -375,7 +424,7 @@ function checkNpmInstallation() {
         'success' => false,
         'error' => 'NPM não encontrado em nenhum local padrão',
         'attempts' => $attempts,
-        'path_check' => $pathResult
+        'path_check' => $pathResult ?? null
     ];
 }
 
@@ -651,4 +700,7 @@ function openBrowser() {
         ];
     }
 }
+
+// Finalizar buffer de saída
+ob_end_flush();
 ?>
