@@ -86,6 +86,32 @@ try {
     ]);
 }
 
+function ensureNodeAvailable(&$logs) {
+    $nodeCheck = exec('node --version 2>&1', $nodeOutput, $nodeReturn);
+    if ($nodeReturn === 0 && !empty($nodeCheck)) {
+        return $nodeCheck;
+    }
+
+    // Tentar caminhos comuns no Windows
+    $possible = [
+        'C:\\Program Files\\nodejs\\node.exe',
+        'C:\\Program Files (x86)\\nodejs\\node.exe'
+    ];
+    foreach ($possible as $path) {
+        if (file_exists($path)) {
+            $dir = dirname($path);
+            putenv('PATH=' . $dir . PATH_SEPARATOR . getenv('PATH'));
+            $nodeCheck = exec('node --version 2>&1', $nodeOutput, $nodeReturn);
+            if ($nodeReturn === 0 && !empty($nodeCheck)) {
+                $logs[] = ['step' => 'node_check', 'message' => 'Node.js encontrado em ' . $path, 'status' => 'info'];
+                return $nodeCheck;
+            }
+        }
+    }
+
+    return null;
+}
+
 function startDevServerSimple() {
     $logs = [];
     
@@ -97,8 +123,8 @@ function startDevServerSimple() {
         // Verificar se Node.js está instalado
         $logs[] = ['step' => 'node_check', 'message' => 'Verificando Node.js...', 'status' => 'info'];
         
-        $nodeCheck = exec('node --version 2>&1', $nodeOutput, $nodeReturn);
-        if ($nodeReturn !== 0 || empty($nodeCheck)) {
+        $nodeCheck = ensureNodeAvailable($logs);
+        if ($nodeCheck === null) {
             $logs[] = ['step' => 'node_check', 'message' => 'Node.js não encontrado', 'status' => 'error'];
             return [
                 'success' => false,
